@@ -12,6 +12,10 @@ Perform fundamental and risk analysis on individual stocks or the entire portfol
 
 Run all Python code via `uv run python -c "..."` from the project root `/Users/shuhaoqing/repo/haoInvest`.
 
+**Choose the correct mode based on user intent:**
+
+### Default Mode (personal analysis)
+Use when analyzing stocks for yourself.
 ```python
 from haoinvest.db import Database
 from haoinvest.models import MarketType
@@ -22,6 +26,25 @@ from haoinvest.analysis.report import full_stock_report
 db = Database()
 db.init_schema()
 ```
+
+### Sandbox Mode (analyzing for friends)
+Use when the user says "帮朋友看"、"帮朋友分析"、"sandbox"、"临时分析"、"不要写入我的数据库", or otherwise indicates the analysis is for someone else.
+
+When entering sandbox mode, tell the user: "正在使用临时数据库，不会影响你的个人数据。"
+
+```python
+from pathlib import Path
+from haoinvest.db import Database
+from haoinvest.models import MarketType
+from haoinvest.analysis.fundamental import analyze_stock
+from haoinvest.analysis.risk import calculate_risk_metrics, portfolio_correlation
+from haoinvest.analysis.report import full_stock_report
+
+db = Database(db_path=Path("/tmp/haoinvest_sandbox.db"))
+db.init_schema()
+```
+
+> **Note:** Sandbox mode uses a temp DB at `/tmp/haoinvest_sandbox.db`. Data persists within the session but is cleaned up by the OS eventually. Portfolio Risk Overview is NOT available in sandbox mode (no holdings data).
 
 ## Commands
 
