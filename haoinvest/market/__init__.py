@@ -31,5 +31,11 @@ def _auto_register() -> None:
     except ImportError:
         pass
 
+    try:
+        from .us_provider import USProvider
+        register_provider(MarketType.US, USProvider)
+    except ImportError:
+        pass
+
 
 _auto_register()
