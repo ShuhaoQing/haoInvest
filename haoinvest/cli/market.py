@@ -40,13 +40,13 @@ def quote(
 
     result = {
         "Symbol": symbol,
-        "Name": info.get("name", ""),
+        "Name": info.name,
         "Price": price,
-        "Currency": info.get("currency", ""),
-        "Sector": info.get("sector", ""),
-        "PE(TTM)": info.get("pe_ratio"),
-        "PB": info.get("pb_ratio"),
-        "MarketCap": info.get("total_market_cap"),
+        "Currency": info.currency,
+        "Sector": info.sector,
+        "PE(TTM)": info.pe_ratio,
+        "PB": info.pb_ratio,
+        "MarketCap": info.total_market_cap,
         "MarketType": mt.value,
     }
 
@@ -79,4 +79,4 @@ def history(
     if use_json:
         json_output(bars)
     else:
-        tsv_output(bars, columns=["date", "open", "high", "low", "close", "volume"])
+        tsv_output(bars, columns=["trade_date", "open", "high", "low", "close", "volume"])

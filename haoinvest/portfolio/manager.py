@@ -4,7 +4,7 @@ from datetime import datetime
 
 from ..config import PRECISION, ZERO_THRESHOLD
 from ..db import Database
-from ..models import MarketType, Position, Transaction, TransactionAction
+from ..models import HoldingSummary, MarketType, Position, Transaction, TransactionAction
 
 
 class PortfolioManager:
@@ -55,7 +55,7 @@ class PortfolioManager:
         holdings = self.get_holdings()
         return sum(h.cached_quantity * h.cached_avg_cost for h in holdings)
 
-    def get_portfolio_summary(self) -> list[dict]:
+    def get_portfolio_summary(self) -> list[HoldingSummary]:
         """Get a summary of all holdings with allocation percentages."""
         holdings = self.get_holdings()
         total_cost = sum(h.cached_quantity * h.cached_avg_cost for h in holdings)
@@ -63,15 +63,15 @@ class PortfolioManager:
         result = []
         for h in holdings:
             position_cost = h.cached_quantity * h.cached_avg_cost
-            result.append({
-                "symbol": h.symbol,
-                "market_type": h.market_type.value,
-                "quantity": h.cached_quantity,
-                "avg_cost": h.cached_avg_cost,
-                "position_cost": round(position_cost, 2),
-                "allocation_pct": round(position_cost / total_cost * 100, 2) if total_cost > 0 else 0,
-                "currency": h.currency,
-            })
+            result.append(HoldingSummary(
+                symbol=h.symbol,
+                market_type=h.market_type.value,
+                quantity=h.cached_quantity,
+                avg_cost=h.cached_avg_cost,
+                position_cost=round(position_cost, 2),
+                allocation_pct=round(position_cost / total_cost * 100, 2) if total_cost > 0 else 0,
+                currency=h.currency,
+            ))
         return result
 
     def _sync_position(self, symbol: str, market_type: MarketType) -> None:

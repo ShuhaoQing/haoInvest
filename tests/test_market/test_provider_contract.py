@@ -49,8 +49,8 @@ class TestAKShareProviderContract:
             provider = AKShareProvider()
             bars = provider.get_price_history("600519", date(2026, 3, 25), date(2026, 3, 27))
             assert len(bars) == 3
-            assert bars[0]["close"] == 1680.0
-            assert bars[0]["date"] == date(2026, 3, 25)
+            assert bars[0].close == 1680.0
+            assert bars[0].trade_date == date(2026, 3, 25)
 
     def test_get_basic_info(self):
         mock_df = pd.DataFrame({
@@ -62,11 +62,11 @@ class TestAKShareProviderContract:
         with patch.dict("sys.modules", {"akshare": mock_ak}):
             provider = AKShareProvider()
             info = provider.get_basic_info("600519")
-            assert info["name"] == "贵州茅台"
-            assert info["currency"] == "CNY"
-            assert info["pe_ratio"] == 30.5
-            assert info["pb_ratio"] == 10.2
-            assert info["total_market_cap"] == 2100000000000
+            assert info.name == "贵州茅台"
+            assert info.currency == "CNY"
+            assert info.pe_ratio == 30.5
+            assert info.pb_ratio == 10.2
+            assert info.total_market_cap == 2100000000000
 
 
 class TestCryptoProviderHelpers:
@@ -124,6 +124,6 @@ class TestCryptoProviderContract:
         mock_client.get.return_value = mock_resp
 
         info = provider.get_basic_info("BTC")
-        assert info["name"] == "Bitcoin"
-        assert info["sector"] == "crypto"
-        assert info["currency"] == "USD"
+        assert info.name == "Bitcoin"
+        assert info.sector == "crypto"
+        assert info.currency == "USD"

@@ -25,12 +25,12 @@ class TestRiskMetrics:
     def test_basic_metrics(self, db: Database):
         _seed_uptrend(db)
         result = calculate_risk_metrics(db, "TEST", MarketType.A_SHARE)
-        assert result["num_days"] == 30
-        assert result["total_return_pct"] is not None
-        assert result["total_return_pct"] > 0
-        assert result["max_drawdown_pct"] is not None
+        assert result.num_days == 30
+        assert result.total_return_pct is not None
+        assert result.total_return_pct > 0
+        assert result.max_drawdown_pct is not None
         # Constant uptrend has 0 drawdown
-        assert result["max_drawdown_pct"] == 0.0
+        assert result.max_drawdown_pct == 0.0
 
     def test_not_enough_data(self, db: Database):
         db.save_prices([PriceBar(
@@ -38,8 +38,8 @@ class TestRiskMetrics:
             trade_date=date(2026, 1, 2), close=100.0,
         )])
         result = calculate_risk_metrics(db, "X", MarketType.A_SHARE)
-        assert result["annualized_volatility"] is None
-        assert "Not enough" in result.get("message", "")
+        assert result.annualized_volatility is None
+        assert result.message is not None and "Not enough" in result.message
 
 
 class TestCorrelation:

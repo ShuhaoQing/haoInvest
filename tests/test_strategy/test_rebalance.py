@@ -31,10 +31,10 @@ class TestRebalance:
             current_prices={"A": 100.0, "B": 100.0},
         )
         # Should sell some A and buy some B
-        sell_a = next((t for t in trades if t["symbol"] == "A"), None)
-        buy_b = next((t for t in trades if t["symbol"] == "B"), None)
-        assert sell_a is not None and sell_a["action"] == "sell"
-        assert buy_b is not None and buy_b["action"] == "buy"
+        sell_a = next((t for t in trades if t.symbol == "A"), None)
+        buy_b = next((t for t in trades if t.symbol == "B"), None)
+        assert sell_a is not None and sell_a.action == "sell"
+        assert buy_b is not None and buy_b.action == "buy"
 
     def test_skip_small_adjustments(self, db: Database):
         self._setup_portfolio(db)
@@ -53,8 +53,8 @@ class TestRebalance:
             target_weights={"A": 0.4, "B": 0.3, "C": 0.3},
             current_prices={"A": 100.0, "B": 100.0, "C": 50.0},
         )
-        buy_c = next((t for t in trades if t["symbol"] == "C"), None)
-        assert buy_c is not None and buy_c["action"] == "buy"
+        buy_c = next((t for t in trades if t.symbol == "C"), None)
+        assert buy_c is not None and buy_c.action == "buy"
 
     def test_empty_portfolio(self, db: Database):
         trades = calculate_rebalance(

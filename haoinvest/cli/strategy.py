@@ -31,7 +31,7 @@ def _ensure_prices_cached(db: Database, symbol: str, market_type: MarketType, st
     provider = get_provider(market_type)
     bars = provider.get_price_history(symbol, start, end)
     if bars:
-        db.save_prices(symbol, market_type, bars)
+        db.save_prices(bars)
 
 
 @app.command()
@@ -69,10 +69,9 @@ def optimize(
     if use_json:
         json_output(result)
     else:
-        kv_output({"Method": result["method"], "Explanation": result["explanation"]})
+        kv_output({"Method": result.method, "Explanation": result.explanation})
         print()
-        weights = result["weights"]
-        rows = [{"Symbol": s, "Weight%": round(w * 100, 2)} for s, w in weights.items()]
+        rows = [{"Symbol": s, "Weight%": round(w * 100, 2)} for s, w in result.weights.items()]
         tsv_output(rows, columns=["Symbol", "Weight%"])
 
 

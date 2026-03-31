@@ -32,7 +32,7 @@ def _ensure_prices_cached(db: Database, symbol: str, market_type: MarketType, st
     provider = get_provider(market_type)
     bars = provider.get_price_history(symbol, start, end)
     if bars:
-        db.save_prices(symbol, market_type, bars)
+        db.save_prices(bars)
 
 
 @app.command()
@@ -53,16 +53,16 @@ def fundamental(
         json_output(result)
     else:
         kv_output({
-            "Symbol": result["symbol"],
-            "Name": result["name"],
-            "Price": result["current_price"],
-            "PE(TTM)": result["pe_ratio"],
-            "PB": result["pb_ratio"],
-            "Sector": result["sector"],
-            "MarketCap": result["total_market_cap"],
-            "PE_Assessment": result["valuation"]["pe_assessment"],
-            "PB_Assessment": result["valuation"]["pb_assessment"],
-            "Overall": result["valuation"]["overall"],
+            "Symbol": result.symbol,
+            "Name": result.name,
+            "Price": result.current_price,
+            "PE(TTM)": result.pe_ratio,
+            "PB": result.pb_ratio,
+            "Sector": result.sector,
+            "MarketCap": result.total_market_cap,
+            "PE_Assessment": result.valuation.pe_assessment,
+            "PB_Assessment": result.valuation.pb_assessment,
+            "Overall": result.valuation.overall,
         })
 
 
@@ -83,11 +83,11 @@ def risk(
         mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
         _ensure_prices_cached(db, symbol, mt, start_date, end_date)
         result = calculate_risk_metrics(db, symbol, mt, start_date, end_date)
-        result["symbol"] = symbol
+        output = {"symbol": symbol, **result.model_dump()}
         if use_json:
-            json_output(result)
+            json_output(output)
         else:
-            kv_output(result)
+            kv_output(output)
     else:
         # All holdings
         positions = db.get_positions(include_zero=False)
@@ -98,8 +98,7 @@ def risk(
         for pos in positions:
             _ensure_prices_cached(db, pos.symbol, pos.market_type, start_date, end_date)
             metrics = calculate_risk_metrics(db, pos.symbol, pos.market_type, start_date, end_date)
-            metrics["symbol"] = pos.symbol
-            results.append(metrics)
+            results.append({"symbol": pos.symbol, **metrics.model_dump()})
         if use_json:
             json_output(results)
         else:

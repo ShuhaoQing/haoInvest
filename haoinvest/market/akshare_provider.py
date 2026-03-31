@@ -13,6 +13,7 @@ from typing import Any, Callable
 
 import requests
 
+from ..models import BasicInfo, MarketType, PriceBar
 from .provider import MarketProvider
 
 logger = logging.getLogger(__name__)
@@ -83,7 +84,7 @@ class AKShareProvider(MarketProvider):
             label=f"get_current_price({symbol})",
         )
 
-    def get_price_history(self, symbol: str, start: date, end: date) -> list[dict]:
+    def get_price_history(self, symbol: str, start: date, end: date) -> list[PriceBar]:
         """Get daily OHLCV bars for an A-share stock."""
         return _with_fallback(
             primary_fn=lambda: self._akshare_price_history(symbol, start, end),
@@ -91,7 +92,7 @@ class AKShareProvider(MarketProvider):
             label=f"get_price_history({symbol})",
         )
 
-    def get_basic_info(self, symbol: str) -> dict:
+    def get_basic_info(self, symbol: str) -> BasicInfo:
         """Get basic info for an A-share stock."""
         return _with_fallback(
             primary_fn=lambda: self._akshare_basic_info(symbol),
@@ -111,7 +112,7 @@ class AKShareProvider(MarketProvider):
         return float(row.iloc[0]["最新价"])
 
     @staticmethod
-    def _akshare_price_history(symbol: str, start: date, end: date) -> list[dict]:
+    def _akshare_price_history(symbol: str, start: date, end: date) -> list[PriceBar]:
         import akshare as ak
         df = ak.stock_zh_a_hist(
             symbol=symbol,
@@ -122,18 +123,20 @@ class AKShareProvider(MarketProvider):
         )
         bars = []
         for _, row in df.iterrows():
-            bars.append({
-                "date": date.fromisoformat(str(row["日期"])[:10]),
-                "open": float(row["开盘"]),
-                "high": float(row["最高"]),
-                "low": float(row["最低"]),
-                "close": float(row["收盘"]),
-                "volume": float(row["成交量"]),
-            })
+            bars.append(PriceBar(
+                symbol=symbol,
+                market_type=MarketType.A_SHARE,
+                trade_date=date.fromisoformat(str(row["日期"])[:10]),
+                open=float(row["开盘"]),
+                high=float(row["最高"]),
+                low=float(row["最低"]),
+                close=float(row["收盘"]),
+                volume=float(row["成交量"]),
+            ))
         return bars
 
     @staticmethod
-    def _akshare_basic_info(symbol: str) -> dict:
+    def _akshare_basic_info(symbol: str) -> BasicInfo:
         import akshare as ak
         df = ak.stock_individual_info_em(symbol=symbol)
         info = {}
@@ -144,15 +147,15 @@ class AKShareProvider(MarketProvider):
         pb_raw = info.get("市净率", "")
         cap_raw = info.get("总市值", "")
 
-        return {
-            "name": info.get("股票简称", ""),
-            "sector": info.get("行业", ""),
-            "currency": "CNY",
-            "market_type": "a_share",
-            "total_market_cap": _parse_int(cap_raw),
-            "pe_ratio": _parse_float(pe_raw),
-            "pb_ratio": _parse_float(pb_raw),
-        }
+        return BasicInfo(
+            name=info.get("股票简称", ""),
+            sector=info.get("行业", ""),
+            currency="CNY",
+            market_type="a_share",
+            total_market_cap=_parse_int(cap_raw),
+            pe_ratio=_parse_float(pe_raw),
+            pb_ratio=_parse_float(pb_raw),
+        )
 
     # -- Fallback methods --
 
@@ -180,7 +183,7 @@ class AKShareProvider(MarketProvider):
         return price
 
     @staticmethod
-    def _tencent_price_history(symbol: str, start: date, end: date) -> list[dict]:
+    def _tencent_price_history(symbol: str, start: date, end: date) -> list[PriceBar]:
         """Get forward-adjusted daily klines from Tencent Finance API."""
         prefix = _market_prefix(symbol)
         start_str = start.strftime("%Y-%m-%d")
@@ -205,17 +208,19 @@ class AKShareProvider(MarketProvider):
             bar_date = date.fromisoformat(k[0])
             if bar_date < start or bar_date > end:
                 continue
-            bars.append({
-                "date": bar_date,
-                "open": float(k[1]),
-                "high": float(k[3]),
-                "low": float(k[4]),
-                "close": float(k[2]),
-                "volume": float(k[5]),
-            })
+            bars.append(PriceBar(
+                symbol=symbol,
+                market_type=MarketType.A_SHARE,
+                trade_date=bar_date,
+                open=float(k[1]),
+                high=float(k[3]),
+                low=float(k[4]),
+                close=float(k[2]),
+                volume=float(k[5]),
+            ))
         return bars
 
-    def _emweb_basic_info(self, symbol: str) -> dict:
+    def _emweb_basic_info(self, symbol: str) -> BasicInfo:
         """Get basic info from eastmoney emweb + Tencent valuation APIs."""
         code = f"{'SH' if symbol.startswith(('6', '9')) else 'SZ'}{symbol}"
         url = "https://emweb.securities.eastmoney.com/pc_hsf10/CompanySurvey/CompanySurveyAjax"
@@ -226,15 +231,15 @@ class AKShareProvider(MarketProvider):
 
         valuation = self._tencent_valuation(symbol)
 
-        return {
-            "name": jbzl.get("agjc", ""),
-            "sector": jbzl.get("sshy", ""),
-            "currency": "CNY",
-            "market_type": "a_share",
-            "total_market_cap": valuation.get("total_market_cap"),
-            "pe_ratio": valuation.get("pe_ratio"),
-            "pb_ratio": valuation.get("pb_ratio"),
-        }
+        return BasicInfo(
+            name=jbzl.get("agjc", ""),
+            sector=jbzl.get("sshy", ""),
+            currency="CNY",
+            market_type="a_share",
+            total_market_cap=valuation.get("total_market_cap"),
+            pe_ratio=valuation.get("pe_ratio"),
+            pb_ratio=valuation.get("pb_ratio"),
+        )
 
     @staticmethod
     def _tencent_valuation(symbol: str) -> dict:

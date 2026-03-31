@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 import yfinance as yf
 
+from ..models import BasicInfo, MarketType, PriceBar
 from .provider import MarketProvider
 
 
@@ -25,7 +26,7 @@ class USProvider(MarketProvider):
 
     def get_price_history(
         self, symbol: str, start: date, end: date
-    ) -> list[dict]:
+    ) -> list[PriceBar]:
         """Get daily OHLCV bars for a US stock."""
         ticker = yf.Ticker(symbol)
         # yfinance end date is exclusive, so add one day
@@ -35,26 +36,28 @@ class USProvider(MarketProvider):
 
         bars = []
         for idx, row in df.iterrows():
-            bars.append({
-                "date": idx.date(),
-                "open": float(row["Open"]),
-                "high": float(row["High"]),
-                "low": float(row["Low"]),
-                "close": float(row["Close"]),
-                "volume": int(row["Volume"]),
-            })
+            bars.append(PriceBar(
+                symbol=symbol,
+                market_type=MarketType.US,
+                trade_date=idx.date(),
+                open=float(row["Open"]),
+                high=float(row["High"]),
+                low=float(row["Low"]),
+                close=float(row["Close"]),
+                volume=int(row["Volume"]),
+            ))
         return bars
 
-    def get_basic_info(self, symbol: str) -> dict:
+    def get_basic_info(self, symbol: str) -> BasicInfo:
         """Get basic info for a US stock."""
         ticker = yf.Ticker(symbol)
         info = ticker.info
-        return {
-            "name": info.get("shortName") or info.get("longName", ""),
-            "sector": info.get("sector", ""),
-            "currency": info.get("currency", "USD"),
-            "market_type": "us",
-            "market_cap": info.get("marketCap"),
-            "pe_ratio": info.get("trailingPE"),
-            "pb_ratio": info.get("priceToBook"),
-        }
+        return BasicInfo(
+            name=info.get("shortName") or info.get("longName", ""),
+            sector=info.get("sector", ""),
+            currency=info.get("currency", "USD"),
+            market_type="us",
+            market_cap=info.get("marketCap"),
+            pe_ratio=info.get("trailingPE"),
+            pb_ratio=info.get("priceToBook"),
+        )

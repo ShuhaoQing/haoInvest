@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 from datetime import date
 
+from ..models import BasicInfo, PriceBar
+
 
 class MarketProvider(ABC):
     @abstractmethod
@@ -12,15 +14,9 @@ class MarketProvider(ABC):
     @abstractmethod
     def get_price_history(
         self, symbol: str, start: date, end: date
-    ) -> list[dict]:
-        """Return daily OHLCV bars as a list of dicts.
-
-        Each dict has keys: date, open, high, low, close, volume.
-        """
+    ) -> list[PriceBar]:
+        """Return daily OHLCV bars as PriceBar models."""
 
     @abstractmethod
-    def get_basic_info(self, symbol: str) -> dict:
-        """Return basic info about the asset.
-
-        Expected keys: name, sector (if applicable), currency.
-        """
+    def get_basic_info(self, symbol: str) -> BasicInfo:
+        """Return basic info about the asset."""

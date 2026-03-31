@@ -8,7 +8,7 @@ import math
 from datetime import date
 
 from ..db import Database
-from ..models import MarketType
+from ..models import AllocationSuggestion, MarketType
 
 
 def equal_weight(symbols: list[str]) -> dict[str, float]:
@@ -96,13 +96,11 @@ def suggest_allocation(
     method: str = "risk_parity",
     start_date: date | None = None,
     end_date: date | None = None,
-) -> dict:
+) -> AllocationSuggestion:
     """Generate allocation suggestion with explanation.
 
     Args:
         method: "equal_weight", "risk_parity", or "min_volatility"
-
-    Returns dict with: method, weights, explanation.
     """
     symbols = [s for s, _ in symbols_with_market]
 
@@ -127,8 +125,8 @@ def suggest_allocation(
     else:
         raise ValueError(f"Unknown method: {method}. Use 'equal_weight', 'risk_parity', or 'min_volatility'.")
 
-    return {
-        "method": method,
-        "weights": weights,
-        "explanation": explanation,
-    }
+    return AllocationSuggestion(
+        method=method,
+        weights=weights,
+        explanation=explanation,
+    )

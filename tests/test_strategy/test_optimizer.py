@@ -79,9 +79,9 @@ class TestSuggestAllocation:
             [("A", MarketType.A_SHARE), ("B", MarketType.A_SHARE)],
             method="equal_weight",
         )
-        assert result["method"] == "equal_weight"
-        assert abs(sum(result["weights"].values()) - 1.0) < 1e-10
-        assert "等权" in result["explanation"]
+        assert result.method == "equal_weight"
+        assert abs(sum(result.weights.values()) - 1.0) < 1e-10
+        assert "等权" in result.explanation
 
     def test_unknown_method_raises(self, db: Database):
         import pytest

@@ -4,7 +4,7 @@ import math
 from datetime import date
 
 from ..db import Database
-from ..models import MarketType
+from ..models import MarketType, RiskMetrics
 
 
 def calculate_risk_metrics(
@@ -14,36 +14,25 @@ def calculate_risk_metrics(
     start_date: date | None = None,
     end_date: date | None = None,
     risk_free_rate: float = 0.02,
-) -> dict:
+) -> RiskMetrics:
     """Calculate risk metrics for a single asset from cached price history.
 
     Args:
         risk_free_rate: Annualized risk-free rate (default 2% for China).
-
-    Returns dict with: annualized_volatility, max_drawdown, max_drawdown_pct,
-    sharpe_ratio, total_return_pct, num_days.
     """
     bars = db.get_prices(symbol, market_type, start_date, end_date)
     if len(bars) < 2:
-        return {
-            "annualized_volatility": None,
-            "max_drawdown_pct": None,
-            "sharpe_ratio": None,
-            "total_return_pct": None,
-            "num_days": len(bars),
-            "message": "Not enough price data for analysis",
-        }
+        return RiskMetrics(
+            num_days=len(bars),
+            message="Not enough price data for analysis",
+        )
 
     closes = [b.close for b in bars if b.close is not None]
     if len(closes) < 2:
-        return {
-            "annualized_volatility": None,
-            "max_drawdown_pct": None,
-            "sharpe_ratio": None,
-            "total_return_pct": None,
-            "num_days": len(bars),
-            "message": "Not enough close prices for analysis",
-        }
+        return RiskMetrics(
+            num_days=len(bars),
+            message="Not enough close prices for analysis",
+        )
 
     daily_returns = [
         (closes[i] - closes[i - 1]) / closes[i - 1]
@@ -80,13 +69,13 @@ def calculate_risk_metrics(
     else:
         sharpe = None
 
-    return {
-        "annualized_volatility": round(ann_vol * 100, 2) if ann_vol else None,  # as percentage
-        "max_drawdown_pct": round(max_dd * 100, 2),
-        "sharpe_ratio": round(sharpe, 2) if sharpe is not None else None,
-        "total_return_pct": round(total_return_pct, 2),
-        "num_days": len(closes),
-    }
+    return RiskMetrics(
+        annualized_volatility=round(ann_vol * 100, 2) if ann_vol else None,
+        max_drawdown_pct=round(max_dd * 100, 2),
+        sharpe_ratio=round(sharpe, 2) if sharpe is not None else None,
+        total_return_pct=round(total_return_pct, 2),
+        num_days=len(closes),
+    )
 
 
 def portfolio_correlation(

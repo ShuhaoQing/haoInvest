@@ -4,6 +4,7 @@ from datetime import date, datetime
 
 import httpx
 
+from ..models import BasicInfo, MarketType, PriceBar
 from .provider import MarketProvider
 
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
@@ -68,7 +69,7 @@ class CryptoProvider(MarketProvider):
 
     def get_price_history(
         self, symbol: str, start: date, end: date
-    ) -> list[dict]:
+    ) -> list[PriceBar]:
         """Get daily OHLC data for a crypto asset (close prices only from CoinGecko free tier)."""
         coin_id = _to_coingecko_id(symbol)
         start_ts = int(datetime.combine(start, datetime.min.time()).timestamp())
@@ -84,27 +85,25 @@ class CryptoProvider(MarketProvider):
         bars = []
         for ts_ms, price in data.get("prices", []):
             bar_date = datetime.fromtimestamp(ts_ms / 1000).date()
-            bars.append({
-                "date": bar_date,
-                "open": None,
-                "high": None,
-                "low": None,
-                "close": float(price),
-                "volume": None,
-            })
+            bars.append(PriceBar(
+                symbol=symbol,
+                market_type=MarketType.CRYPTO,
+                trade_date=bar_date,
+                close=float(price),
+            ))
         return bars
 
-    def get_basic_info(self, symbol: str) -> dict:
+    def get_basic_info(self, symbol: str) -> BasicInfo:
         """Get basic info for a crypto asset."""
         coin_id = _to_coingecko_id(symbol)
         resp = self.client.get(f"{COINGECKO_BASE}/coins/{coin_id}")
         resp.raise_for_status()
         data = resp.json()
-        return {
-            "name": data.get("name", ""),
-            "sector": "crypto",
-            "currency": "USD",
-            "market_type": "crypto",
-            "market_cap": data.get("market_data", {}).get("market_cap", {}).get("usd"),
-            "total_supply": data.get("market_data", {}).get("total_supply"),
-        }
+        return BasicInfo(
+            name=data.get("name", ""),
+            sector="crypto",
+            currency="USD",
+            market_type="crypto",
+            market_cap=data.get("market_data", {}).get("market_cap", {}).get("usd"),
+            total_supply=data.get("market_data", {}).get("total_supply"),
+        )

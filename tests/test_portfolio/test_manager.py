@@ -169,5 +169,5 @@ class TestPortfolioSummary:
         ))
         summary = pm.get_portfolio_summary()
         assert len(summary) == 2
-        total_alloc = sum(s["allocation_pct"] for s in summary)
+        total_alloc = sum(s.allocation_pct for s in summary)
         assert abs(total_alloc - 100.0) < 0.01

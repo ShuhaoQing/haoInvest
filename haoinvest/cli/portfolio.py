@@ -112,16 +112,14 @@ def returns(
             error_output(f"Failed to get price for {symbol}: {e}")
             raise typer.Exit(1)
 
-        result = unrealized_pnl(db, symbol, mt, price)
-        result["symbol"] = symbol
-
+        upnl = unrealized_pnl(db, symbol, mt, price)
         rpnl = realized_pnl(db, symbol, mt)
-        result.update(rpnl)
+        output = {"symbol": symbol, **upnl.model_dump(), **rpnl.model_dump()}
 
         if use_json:
-            json_output(result)
+            json_output(output)
         else:
-            kv_output(result)
+            kv_output(output)
     else:
         # All holdings — fetch current prices
         positions = db.get_positions(include_zero=False)
@@ -137,19 +135,19 @@ def returns(
             except Exception as e:
                 error_output(f"Failed to get price for {pos.symbol}: {e}")
 
-        result = portfolio_returns_summary(db, prices)
+        summary = portfolio_returns_summary(db, prices)
 
         if use_json:
-            json_output(result)
+            json_output(summary)
         else:
             kv_output({
-                "TotalMarketValue": result["total_market_value"],
-                "TotalCostBasis": result["total_cost_basis"],
-                "TotalUnrealizedPnL": result["total_unrealized_pnl"],
-                "TotalUnrealizedPnL%": result["total_unrealized_pnl_pct"],
+                "TotalMarketValue": summary.total_market_value,
+                "TotalCostBasis": summary.total_cost_basis,
+                "TotalUnrealizedPnL": summary.total_unrealized_pnl,
+                "TotalUnrealizedPnL%": summary.total_unrealized_pnl_pct,
             })
             print()
             tsv_output(
-                result["holdings"],
+                summary.holdings,
                 columns=["symbol", "market_type", "quantity", "avg_cost", "current_price", "unrealized_pnl", "unrealized_pnl_pct"],
             )

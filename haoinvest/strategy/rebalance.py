@@ -1,7 +1,7 @@
 """Rebalance calculation: compare current vs target allocation."""
 
 from ..db import Database
-from ..models import MarketType
+from ..models import MarketType, RebalanceTrade
 
 
 def calculate_rebalance(
@@ -9,7 +9,7 @@ def calculate_rebalance(
     target_weights: dict[str, float],
     current_prices: dict[str, float],
     total_portfolio_value: float | None = None,
-) -> list[dict]:
+) -> list[RebalanceTrade]:
     """Calculate rebalance trades to move from current to target allocation.
 
     Args:
@@ -17,9 +17,6 @@ def calculate_rebalance(
         current_prices: {symbol: current_price}
         total_portfolio_value: If provided, use this as total value.
             Otherwise, calculate from current positions.
-
-    Returns list of trade instructions: [{symbol, action, quantity, price,
-    current_weight, target_weight, trade_value}]
     """
     positions = db.get_positions(include_zero=False)
     pos_map = {p.symbol: p for p in positions}
@@ -54,29 +51,27 @@ def calculate_rebalance(
 
         price = current_prices.get(symbol)
         if price is None or price <= 0:
-            trades.append({
-                "symbol": symbol,
-                "action": "buy" if diff_w > 0 else "sell",
-                "quantity": None,
-                "price": None,
-                "current_weight": round(current_w * 100, 2),
-                "target_weight": round(target_w * 100, 2),
-                "trade_value": round(abs(diff_w) * total_portfolio_value, 2),
-                "note": "需要提供当前价格才能计算具体数量",
-            })
+            trades.append(RebalanceTrade(
+                symbol=symbol,
+                action="buy" if diff_w > 0 else "sell",
+                current_weight=round(current_w * 100, 2),
+                target_weight=round(target_w * 100, 2),
+                trade_value=round(abs(diff_w) * total_portfolio_value, 2),
+                note="需要提供当前价格才能计算具体数量",
+            ))
             continue
 
         trade_value = abs(diff_w) * total_portfolio_value
         quantity = trade_value / price
 
-        trades.append({
-            "symbol": symbol,
-            "action": "buy" if diff_w > 0 else "sell",
-            "quantity": round(quantity, 4),
-            "price": price,
-            "current_weight": round(current_w * 100, 2),
-            "target_weight": round(target_w * 100, 2),
-            "trade_value": round(trade_value, 2),
-        })
+        trades.append(RebalanceTrade(
+            symbol=symbol,
+            action="buy" if diff_w > 0 else "sell",
+            quantity=round(quantity, 4),
+            price=price,
+            current_weight=round(current_w * 100, 2),
+            target_weight=round(target_w * 100, 2),
+            trade_value=round(trade_value, 2),
+        ))
 
     return trades
