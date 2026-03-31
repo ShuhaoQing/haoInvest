@@ -6,10 +6,13 @@ requires-python = ">=3.11"
 dependencies = [
     "akshare==1.18.49",
     "pydantic==2.12.5",
-    "click==8.3.1",
     "httpx==0.28.1",
     "yfinance==1.2.0",
+    "typer==0.24.1",
 ]
+
+[project.scripts]
+haoinvest = "haoinvest.cli:app"
 
 [dependency-groups]
 dev = [
@@ -22,3 +25,7 @@ markers = [
     "integration: marks tests that call external APIs (deselect with '-m \"not integration\"')",
 ]
 testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
