@@ -1,5 +1,7 @@
 # haoInvest
 
+[![CI](https://github.com/ShuhaoQing/haoInvest/actions/workflows/ci.yml/badge.svg)](https://github.com/ShuhaoQing/haoInvest/actions/workflows/ci.yml)
+
 Personal investment portfolio management system — track holdings, analyze stocks, and build investment discipline.
 
 Built for a beginner investor in China covering A-shares, US stocks, HK stocks, and crypto.
@@ -12,7 +14,7 @@ Built for a beginner investor in China covering A-shares, US stocks, HK stocks, 
 - **Risk Metrics** — Annualized volatility, max drawdown, Sharpe ratio
 - **Portfolio Optimization** — Equal weight, risk parity, minimum volatility allocation strategies
 - **Investment Journal** — Structured entries with decision type and emotion tagging for pattern analysis
-- **Claude Code Skills** — Natural language interface via 5 custom skills (`/portfolio`, `/market`, `/analyze`, `/strategy`, `/journal`)
+- **Claude Code Skill** — Natural language interface via unified `/haoinvest` skill
 
 ## Prerequisites
 
@@ -22,12 +24,41 @@ Built for a beginner investor in China covering A-shares, US stocks, HK stocks, 
 ## Installation
 
 ```bash
-git clone https://github.com/user/haoInvest.git
+git clone https://github.com/ShuhaoQing/haoInvest.git
 cd haoInvest
 uv sync
 ```
 
 ## Usage
+
+### CLI
+
+```bash
+# Market data
+uv run haoinvest market quote 600519              # A-share quote
+uv run haoinvest market history NVDA --start 2025-01-01
+
+# Portfolio
+uv run haoinvest portfolio list                   # View holdings
+uv run haoinvest portfolio add-trade 600519 buy 100 1800.50
+uv run haoinvest portfolio returns                # P&L summary
+
+# Analysis
+uv run haoinvest analyze fundamental 600519       # PE/PB valuation
+uv run haoinvest analyze risk --symbol NVDA       # Volatility, Sharpe, drawdown
+uv run haoinvest analyze correlation 600519,NVDA  # Correlation matrix
+
+# Strategy
+uv run haoinvest strategy optimize --method risk_parity
+uv run haoinvest strategy rebalance --target '{"600519": 0.5, "NVDA": 0.5}'
+
+# Journal
+uv run haoinvest journal add "First buy of Moutai" --decision buy --emotion rational
+uv run haoinvest journal list
+uv run haoinvest journal review --days 30
+```
+
+All commands support `--json` for structured output. Symbols are auto-detected by format (6-digit → A-share, `_USDT` → crypto, otherwise US).
 
 ### As a Python Library
 
@@ -57,17 +88,9 @@ pm.add_trade(txn)
 holdings = pm.get_holdings()
 ```
 
-### Via Claude Code Skills
+### Via Claude Code
 
-Use the custom skills in Claude Code for natural language interaction:
-
-| Skill | Purpose |
-|-------|---------|
-| `/portfolio` | View holdings, record trades, check P&L |
-| `/market` | Query real-time prices and market conditions |
-| `/analyze` | Fundamental analysis and risk metrics |
-| `/strategy` | Portfolio optimization and rebalance suggestions |
-| `/journal` | Log investment decisions and review patterns |
+Use the unified `/haoinvest` skill in Claude Code for natural language interaction covering portfolio, market data, analysis, strategy, and journaling.
 
 ## Configuration
 
@@ -104,4 +127,4 @@ pytest tests/test_fx.py          # Single module
 
 ## License
 
-Private project.
+[MIT](LICENSE)

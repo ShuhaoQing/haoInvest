@@ -33,11 +33,23 @@ haoinvest/
 ├── config.py          # Config management (~/.haoinvest/)
 ├── fx.py              # Currency conversion with fallback rates
 ├── journal.py         # Investment journal with emotion/decision tagging
+├── cli/               # Typer CLI — entry point: `uv run haoinvest`
+│   ├── __init__.py    # App + subcommand registration
+│   ├── formatters.py  # Output formatting (text/JSON)
+│   ├── analyze.py     # analyze subcommand
+│   ├── journal.py     # journal subcommand
+│   ├── market.py      # market subcommand
+│   ├── portfolio.py   # portfolio subcommand
+│   └── strategy.py    # strategy subcommand
 ├── portfolio/         # Trade recording, position tracking, returns (TWR)
 ├── analysis/          # Fundamental (PE/PB/ROE), risk (volatility, Sharpe, drawdown)
 ├── market/            # Provider registry — akshare, yfinance, crypto MCP
 └── strategy/          # Optimizer (equal weight, risk parity, min vol), rebalance
 ```
+
+## CI
+
+GitHub Actions runs on push/PR to `main`: ruff lint, ruff format check, pytest (non-integration).
 
 ## Key Architecture Decisions
 
