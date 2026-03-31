@@ -14,16 +14,29 @@ from haoinvest.portfolio.returns import (
 
 def _setup_trades(db: Database) -> PortfolioManager:
     pm = PortfolioManager(db)
-    pm.add_trade(Transaction(
-        symbol="600519", market_type=MarketType.A_SHARE,
-        action=TransactionAction.BUY, quantity=100, price=1600.0,
-        fee=5.0, executed_at=datetime(2026, 1, 1),
-    ))
-    pm.add_trade(Transaction(
-        symbol="600519", market_type=MarketType.A_SHARE,
-        action=TransactionAction.SELL, quantity=50, price=1800.0,
-        fee=5.0, tax=45.0, executed_at=datetime(2026, 2, 1),
-    ))
+    pm.add_trade(
+        Transaction(
+            symbol="600519",
+            market_type=MarketType.A_SHARE,
+            action=TransactionAction.BUY,
+            quantity=100,
+            price=1600.0,
+            fee=5.0,
+            executed_at=datetime(2026, 1, 1),
+        )
+    )
+    pm.add_trade(
+        Transaction(
+            symbol="600519",
+            market_type=MarketType.A_SHARE,
+            action=TransactionAction.SELL,
+            quantity=50,
+            price=1800.0,
+            fee=5.0,
+            tax=45.0,
+            executed_at=datetime(2026, 2, 1),
+        )
+    )
     return pm
 
 
@@ -61,16 +74,26 @@ class TestRealizedPnl:
 
     def test_dividend_tracking(self, db: Database):
         pm = PortfolioManager(db)
-        pm.add_trade(Transaction(
-            symbol="600519", market_type=MarketType.A_SHARE,
-            action=TransactionAction.BUY, quantity=100, price=1600.0,
-            executed_at=datetime(2026, 1, 1),
-        ))
-        pm.add_trade(Transaction(
-            symbol="600519", market_type=MarketType.A_SHARE,
-            action=TransactionAction.DIVIDEND, quantity=100, price=25.0,
-            executed_at=datetime(2026, 6, 1),
-        ))
+        pm.add_trade(
+            Transaction(
+                symbol="600519",
+                market_type=MarketType.A_SHARE,
+                action=TransactionAction.BUY,
+                quantity=100,
+                price=1600.0,
+                executed_at=datetime(2026, 1, 1),
+            )
+        )
+        pm.add_trade(
+            Transaction(
+                symbol="600519",
+                market_type=MarketType.A_SHARE,
+                action=TransactionAction.DIVIDEND,
+                quantity=100,
+                price=25.0,
+                executed_at=datetime(2026, 6, 1),
+            )
+        )
         result = realized_pnl(db, "600519", MarketType.A_SHARE)
         assert result.total_dividends == 2500.0
 
@@ -78,16 +101,26 @@ class TestRealizedPnl:
 class TestPortfolioReturnsSummary:
     def test_multi_holding(self, db: Database):
         pm = PortfolioManager(db)
-        pm.add_trade(Transaction(
-            symbol="600519", market_type=MarketType.A_SHARE,
-            action=TransactionAction.BUY, quantity=100, price=1600.0,
-            executed_at=datetime(2026, 1, 1),
-        ))
-        pm.add_trade(Transaction(
-            symbol="BTC_USDT", market_type=MarketType.CRYPTO,
-            action=TransactionAction.BUY, quantity=0.1, price=85000.0,
-            executed_at=datetime(2026, 1, 1),
-        ))
+        pm.add_trade(
+            Transaction(
+                symbol="600519",
+                market_type=MarketType.A_SHARE,
+                action=TransactionAction.BUY,
+                quantity=100,
+                price=1600.0,
+                executed_at=datetime(2026, 1, 1),
+            )
+        )
+        pm.add_trade(
+            Transaction(
+                symbol="BTC_USDT",
+                market_type=MarketType.CRYPTO,
+                action=TransactionAction.BUY,
+                quantity=0.1,
+                price=85000.0,
+                executed_at=datetime(2026, 1, 1),
+            )
+        )
 
         prices = {
             ("600519", MarketType.A_SHARE): 1800.0,

@@ -18,7 +18,14 @@ from .provider import MarketProvider
 
 logger = logging.getLogger(__name__)
 
-_PROXY_VARS = ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "all_proxy", "ALL_PROXY")
+_PROXY_VARS = (
+    "http_proxy",
+    "https_proxy",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "all_proxy",
+    "ALL_PROXY",
+)
 
 # Tencent quote field indices (format: v_sh600519="1~name~code~price~...")
 _TENCENT_PE_TTM = 39
@@ -105,6 +112,7 @@ class AKShareProvider(MarketProvider):
     @staticmethod
     def _akshare_current_price(symbol: str) -> float:
         import akshare as ak
+
         df = ak.stock_zh_a_spot_em()
         row = df[df["代码"] == symbol]
         if row.empty:
@@ -114,6 +122,7 @@ class AKShareProvider(MarketProvider):
     @staticmethod
     def _akshare_price_history(symbol: str, start: date, end: date) -> list[PriceBar]:
         import akshare as ak
+
         df = ak.stock_zh_a_hist(
             symbol=symbol,
             period="daily",
@@ -123,21 +132,24 @@ class AKShareProvider(MarketProvider):
         )
         bars = []
         for _, row in df.iterrows():
-            bars.append(PriceBar(
-                symbol=symbol,
-                market_type=MarketType.A_SHARE,
-                trade_date=date.fromisoformat(str(row["日期"])[:10]),
-                open=float(row["开盘"]),
-                high=float(row["最高"]),
-                low=float(row["最低"]),
-                close=float(row["收盘"]),
-                volume=float(row["成交量"]),
-            ))
+            bars.append(
+                PriceBar(
+                    symbol=symbol,
+                    market_type=MarketType.A_SHARE,
+                    trade_date=date.fromisoformat(str(row["日期"])[:10]),
+                    open=float(row["开盘"]),
+                    high=float(row["最高"]),
+                    low=float(row["最低"]),
+                    close=float(row["收盘"]),
+                    volume=float(row["成交量"]),
+                )
+            )
         return bars
 
     @staticmethod
     def _akshare_basic_info(symbol: str) -> BasicInfo:
         import akshare as ak
+
         df = ak.stock_individual_info_em(symbol=symbol)
         info = {}
         for _, row in df.iterrows():
@@ -208,16 +220,18 @@ class AKShareProvider(MarketProvider):
             bar_date = date.fromisoformat(k[0])
             if bar_date < start or bar_date > end:
                 continue
-            bars.append(PriceBar(
-                symbol=symbol,
-                market_type=MarketType.A_SHARE,
-                trade_date=bar_date,
-                open=float(k[1]),
-                high=float(k[3]),
-                low=float(k[4]),
-                close=float(k[2]),
-                volume=float(k[5]),
-            ))
+            bars.append(
+                PriceBar(
+                    symbol=symbol,
+                    market_type=MarketType.A_SHARE,
+                    trade_date=bar_date,
+                    open=float(k[1]),
+                    high=float(k[3]),
+                    low=float(k[4]),
+                    close=float(k[2]),
+                    volume=float(k[5]),
+                )
+            )
         return bars
 
     def _emweb_basic_info(self, symbol: str) -> BasicInfo:
@@ -262,7 +276,9 @@ class AKShareProvider(MarketProvider):
             tr.raise_for_status()
             tfields = tr.text.strip().split("~")
             if len(tfields) <= _TENCENT_PB:
-                logger.debug("Tencent response too short for %s: %d fields", symbol, len(tfields))
+                logger.debug(
+                    "Tencent response too short for %s: %d fields", symbol, len(tfields)
+                )
                 return result
 
             result["pe_ratio"] = _parse_float(tfields[_TENCENT_PE_TTM])

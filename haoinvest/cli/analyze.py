@@ -6,7 +6,6 @@ from typing import Optional
 import typer
 
 from ..analysis.fundamental import analyze_stock
-from ..analysis.report import full_stock_report
 from ..analysis.risk import calculate_risk_metrics, portfolio_correlation
 from ..db import Database
 from ..models import MarketType
@@ -22,7 +21,9 @@ def _init_db() -> Database:
     return db
 
 
-def _ensure_prices_cached(db: Database, symbol: str, market_type: MarketType, start: date, end: date) -> None:
+def _ensure_prices_cached(
+    db: Database, symbol: str, market_type: MarketType, start: date, end: date
+) -> None:
     """Fetch and cache price history if not already present."""
     from ..market import get_provider
 
@@ -38,7 +39,9 @@ def _ensure_prices_cached(db: Database, symbol: str, market_type: MarketType, st
 @app.command()
 def fundamental(
     symbol: str = typer.Argument(help="Stock/crypto symbol"),
-    market_type: Optional[str] = typer.Option(None, "--market-type", "-m", help="Override: a_share, crypto, us"),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Fundamental analysis — PE/PB, valuation assessment."""
@@ -52,26 +55,36 @@ def fundamental(
     if use_json:
         json_output(result)
     else:
-        kv_output({
-            "Symbol": result.symbol,
-            "Name": result.name,
-            "Price": result.current_price,
-            "PE(TTM)": result.pe_ratio,
-            "PB": result.pb_ratio,
-            "Sector": result.sector,
-            "MarketCap": result.total_market_cap,
-            "PE_Assessment": result.valuation.pe_assessment,
-            "PB_Assessment": result.valuation.pb_assessment,
-            "Overall": result.valuation.overall,
-        })
+        kv_output(
+            {
+                "Symbol": result.symbol,
+                "Name": result.name,
+                "Price": result.current_price,
+                "PE(TTM)": result.pe_ratio,
+                "PB": result.pb_ratio,
+                "Sector": result.sector,
+                "MarketCap": result.total_market_cap,
+                "PE_Assessment": result.valuation.pe_assessment,
+                "PB_Assessment": result.valuation.pb_assessment,
+                "Overall": result.valuation.overall,
+            }
+        )
 
 
 @app.command()
 def risk(
-    symbol: Optional[str] = typer.Option(None, "--symbol", "-s", help="Specific symbol (default: all holdings)"),
-    market_type: Optional[str] = typer.Option(None, "--market-type", "-m", help="Override: a_share, crypto, us"),
-    start: Optional[str] = typer.Option(None, "--start", help="Start date YYYY-MM-DD (default: 1 year ago)"),
-    end: Optional[str] = typer.Option(None, "--end", help="End date YYYY-MM-DD (default: today)"),
+    symbol: Optional[str] = typer.Option(
+        None, "--symbol", "-s", help="Specific symbol (default: all holdings)"
+    ),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
+    start: Optional[str] = typer.Option(
+        None, "--start", help="Start date YYYY-MM-DD (default: 1 year ago)"
+    ),
+    end: Optional[str] = typer.Option(
+        None, "--end", help="End date YYYY-MM-DD (default: today)"
+    ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Risk metrics — volatility, drawdown, Sharpe ratio."""
@@ -97,7 +110,9 @@ def risk(
         results = []
         for pos in positions:
             _ensure_prices_cached(db, pos.symbol, pos.market_type, start_date, end_date)
-            metrics = calculate_risk_metrics(db, pos.symbol, pos.market_type, start_date, end_date)
+            metrics = calculate_risk_metrics(
+                db, pos.symbol, pos.market_type, start_date, end_date
+            )
             results.append({"symbol": pos.symbol, **metrics.model_dump()})
         if use_json:
             json_output(results)
@@ -110,7 +125,9 @@ def risk(
 @app.command()
 def correlation(
     symbols: str = typer.Argument(help="Comma-separated symbols, e.g. 600519,000001"),
-    market_type: Optional[str] = typer.Option(None, "--market-type", "-m", help="Override market type for all symbols"),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override market type for all symbols"
+    ),
     start: Optional[str] = typer.Option(None, "--start", help="Start date YYYY-MM-DD"),
     end: Optional[str] = typer.Option(None, "--end", help="End date YYYY-MM-DD"),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),

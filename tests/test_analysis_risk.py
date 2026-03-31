@@ -13,11 +13,14 @@ def _seed_uptrend(db: Database, symbol: str = "TEST") -> None:
     price = 100.0
     for i in range(30):
         price *= 1.01  # 1% daily gain
-        bars.append(PriceBar(
-            symbol=symbol, market_type=MarketType.A_SHARE,
-            trade_date=date(2026, 1, 2 + i),
-            close=round(price, 2),
-        ))
+        bars.append(
+            PriceBar(
+                symbol=symbol,
+                market_type=MarketType.A_SHARE,
+                trade_date=date(2026, 1, 2 + i),
+                close=round(price, 2),
+            )
+        )
     db.save_prices(bars)
 
 
@@ -33,10 +36,16 @@ class TestRiskMetrics:
         assert result.max_drawdown_pct == 0.0
 
     def test_not_enough_data(self, db: Database):
-        db.save_prices([PriceBar(
-            symbol="X", market_type=MarketType.A_SHARE,
-            trade_date=date(2026, 1, 2), close=100.0,
-        )])
+        db.save_prices(
+            [
+                PriceBar(
+                    symbol="X",
+                    market_type=MarketType.A_SHARE,
+                    trade_date=date(2026, 1, 2),
+                    close=100.0,
+                )
+            ]
+        )
         result = calculate_risk_metrics(db, "X", MarketType.A_SHARE)
         assert result.annualized_volatility is None
         assert result.message is not None and "Not enough" in result.message
@@ -45,16 +54,24 @@ class TestRiskMetrics:
 class TestCorrelation:
     def test_perfectly_correlated(self, db: Database):
         """Two assets with same daily returns should have correlation ~1.0."""
-        bars_a = [PriceBar(
-            symbol="A", market_type=MarketType.A_SHARE,
-            trade_date=date(2026, 1, 2 + i),
-            close=100.0 * (1.01 ** i),
-        ) for i in range(30)]
-        bars_b = [PriceBar(
-            symbol="B", market_type=MarketType.A_SHARE,
-            trade_date=date(2026, 1, 2 + i),
-            close=50.0 * (1.01 ** i),
-        ) for i in range(30)]
+        bars_a = [
+            PriceBar(
+                symbol="A",
+                market_type=MarketType.A_SHARE,
+                trade_date=date(2026, 1, 2 + i),
+                close=100.0 * (1.01**i),
+            )
+            for i in range(30)
+        ]
+        bars_b = [
+            PriceBar(
+                symbol="B",
+                market_type=MarketType.A_SHARE,
+                trade_date=date(2026, 1, 2 + i),
+                close=50.0 * (1.01**i),
+            )
+            for i in range(30)
+        ]
         db.save_prices(bars_a)
         db.save_prices(bars_b)
 

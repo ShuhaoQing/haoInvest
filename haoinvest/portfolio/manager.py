@@ -1,10 +1,14 @@
 """Portfolio management: add trades, view holdings, sync positions."""
 
-from datetime import datetime
-
 from ..config import PRECISION, ZERO_THRESHOLD
 from ..db import Database
-from ..models import HoldingSummary, MarketType, Position, Transaction, TransactionAction
+from ..models import (
+    HoldingSummary,
+    MarketType,
+    Position,
+    Transaction,
+    TransactionAction,
+)
 
 
 class PortfolioManager:
@@ -63,15 +67,19 @@ class PortfolioManager:
         result = []
         for h in holdings:
             position_cost = h.cached_quantity * h.cached_avg_cost
-            result.append(HoldingSummary(
-                symbol=h.symbol,
-                market_type=h.market_type.value,
-                quantity=h.cached_quantity,
-                avg_cost=h.cached_avg_cost,
-                position_cost=round(position_cost, 2),
-                allocation_pct=round(position_cost / total_cost * 100, 2) if total_cost > 0 else 0,
-                currency=h.currency,
-            ))
+            result.append(
+                HoldingSummary(
+                    symbol=h.symbol,
+                    market_type=h.market_type.value,
+                    quantity=h.cached_quantity,
+                    avg_cost=h.cached_avg_cost,
+                    position_cost=round(position_cost, 2),
+                    allocation_pct=round(position_cost / total_cost * 100, 2)
+                    if total_cost > 0
+                    else 0,
+                    currency=h.currency,
+                )
+            )
         return result
 
     def _sync_position(self, symbol: str, market_type: MarketType) -> None:
@@ -114,7 +122,7 @@ def _compute_position(
                 continue
             # Reduce quantity, reduce total_cost proportionally
             sell_ratio = min(txn.quantity / quantity, 1.0)
-            total_cost *= (1 - sell_ratio)
+            total_cost *= 1 - sell_ratio
             quantity -= txn.quantity
 
         elif txn.action == TransactionAction.TRANSFER_IN:
@@ -125,7 +133,7 @@ def _compute_position(
             if abs(quantity) < ZERO_THRESHOLD:
                 continue
             sell_ratio = min(txn.quantity / quantity, 1.0)
-            total_cost *= (1 - sell_ratio)
+            total_cost *= 1 - sell_ratio
             quantity -= txn.quantity
 
         elif txn.action == TransactionAction.SPLIT:

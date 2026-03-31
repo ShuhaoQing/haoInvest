@@ -33,7 +33,9 @@ class TestSchema:
         assert "analysis_cache" in tables
 
     def test_unique_constraint_on_positions(self, db: Database):
-        pos = Position(symbol="600519", market_type=MarketType.A_SHARE, cached_quantity=100)
+        pos = Position(
+            symbol="600519", market_type=MarketType.A_SHARE, cached_quantity=100
+        )
         db.upsert_position(pos)
         # Second upsert should update, not duplicate
         pos.cached_quantity = 200
@@ -79,7 +81,10 @@ class TestTransactions:
         assert txns[0].note == "买入茅台"
 
     def test_filter_by_market_type(self, db: Database):
-        for sym, mt in [("600519", MarketType.A_SHARE), ("BTC_USDT", MarketType.CRYPTO)]:
+        for sym, mt in [
+            ("600519", MarketType.A_SHARE),
+            ("BTC_USDT", MarketType.CRYPTO),
+        ]:
             db.add_transaction(
                 Transaction(
                     symbol=sym,
@@ -129,7 +134,9 @@ class TestPositions:
 
     def test_exclude_zero_positions(self, db: Database):
         db.upsert_position(
-            Position(symbol="600519", market_type=MarketType.A_SHARE, cached_quantity=100)
+            Position(
+                symbol="600519", market_type=MarketType.A_SHARE, cached_quantity=100
+            )
         )
         db.upsert_position(
             Position(symbol="000001", market_type=MarketType.A_SHARE, cached_quantity=0)
@@ -147,18 +154,14 @@ class TestJournal:
             emotion=Emotion.RATIONAL,
             related_symbols=["600519", "000858"],
         )
-        entry_id = db.add_journal_entry(entry)
+        db.add_journal_entry(entry)
         entries = db.get_journal_entries()
         assert len(entries) == 1
         assert set(entries[0].related_symbols) == {"600519", "000858"}
 
     def test_query_by_symbol(self, db: Database):
-        db.add_journal_entry(
-            JournalEntry(content="entry1", related_symbols=["600519"])
-        )
-        db.add_journal_entry(
-            JournalEntry(content="entry2", related_symbols=["000858"])
-        )
+        db.add_journal_entry(JournalEntry(content="entry1", related_symbols=["600519"]))
+        db.add_journal_entry(JournalEntry(content="entry2", related_symbols=["000858"]))
         entries = db.get_journal_entries(symbol="600519")
         assert len(entries) == 1
         assert entries[0].content == "entry1"

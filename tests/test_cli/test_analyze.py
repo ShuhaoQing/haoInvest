@@ -1,6 +1,6 @@
 """Tests for haoinvest analyze CLI commands."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -12,7 +12,6 @@ runner = CliRunner()
 
 
 class TestAnalyzeFundamental:
-
     def test_fundamental_a_share(self):
         mock_result = FundamentalAnalysis(
             symbol="600519",
@@ -59,16 +58,25 @@ class TestAnalyzeFundamental:
             assert "平安银行" in result.output
 
     def test_fundamental_not_found(self):
-        with patch("haoinvest.cli.analyze.analyze_stock", side_effect=ValueError("not found")):
+        with patch(
+            "haoinvest.cli.analyze.analyze_stock", side_effect=ValueError("not found")
+        ):
             result = runner.invoke(app, ["analyze", "fundamental", "999999"])
             assert result.exit_code == 1
 
     def test_fundamental_json(self):
         mock_result = FundamentalAnalysis(
-            symbol="600519", name="贵州茅台", sector="白酒",
-            market_type="a_share", current_price=1800.0, currency="CNY",
-            pe_ratio=35.2, pb_ratio=12.1,
-            valuation=ValuationAssessment(pe_assessment="偏高", pb_assessment="高估", overall="偏高估"),
+            symbol="600519",
+            name="贵州茅台",
+            sector="白酒",
+            market_type="a_share",
+            current_price=1800.0,
+            currency="CNY",
+            pe_ratio=35.2,
+            pb_ratio=12.1,
+            valuation=ValuationAssessment(
+                pe_assessment="偏高", pb_assessment="高估", overall="偏高估"
+            ),
         )
         with patch("haoinvest.cli.analyze.analyze_stock", return_value=mock_result):
             result = runner.invoke(app, ["analyze", "fundamental", "600519", "--json"])
@@ -77,7 +85,6 @@ class TestAnalyzeFundamental:
 
 
 class TestAnalyzeRisk:
-
     def test_risk_no_holdings(self, tmp_path, monkeypatch):
         monkeypatch.setenv("HAOINVEST_DATA_DIR", str(tmp_path))
         result = runner.invoke(app, ["analyze", "risk"])
@@ -94,14 +101,16 @@ class TestAnalyzeRisk:
             num_days=252,
         )
         with patch("haoinvest.cli.analyze._ensure_prices_cached"):
-            with patch("haoinvest.cli.analyze.calculate_risk_metrics", return_value=mock_metrics):
+            with patch(
+                "haoinvest.cli.analyze.calculate_risk_metrics",
+                return_value=mock_metrics,
+            ):
                 result = runner.invoke(app, ["analyze", "risk", "--symbol", "600519"])
                 assert result.exit_code == 0
                 assert "25.5" in result.output
 
 
 class TestAnalyzeIntegration:
-
     @pytest.mark.integration
     def test_fundamental_600519_real(self):
         result = runner.invoke(app, ["analyze", "fundamental", "600519"])

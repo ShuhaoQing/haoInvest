@@ -48,10 +48,7 @@ class JournalManager:
         entries = self.db.get_journal_entries(limit=500)
         cutoff = datetime.now() - timedelta(days=days)
 
-        recent = [
-            e for e in entries
-            if e.created_at and e.created_at >= cutoff
-        ]
+        recent = [e for e in entries if e.created_at and e.created_at >= cutoff]
 
         # Decision type distribution
         decision_counts: dict[str, int] = {}
@@ -75,7 +72,8 @@ class JournalManager:
                 "created_at": e.created_at.isoformat() if e.created_at else None,
             }
             for e in recent
-            if e.retrospective is None and e.decision_type in (DecisionType.BUY, DecisionType.SELL)
+            if e.retrospective is None
+            and e.decision_type in (DecisionType.BUY, DecisionType.SELL)
         ]
 
         return {
@@ -101,10 +99,14 @@ class JournalManager:
             "entry": {
                 "id": entry.id,
                 "content": entry.content,
-                "decision_type": entry.decision_type.value if entry.decision_type else None,
+                "decision_type": entry.decision_type.value
+                if entry.decision_type
+                else None,
                 "emotion": entry.emotion.value if entry.emotion else None,
                 "related_symbols": entry.related_symbols,
-                "created_at": entry.created_at.isoformat() if entry.created_at else None,
+                "created_at": entry.created_at.isoformat()
+                if entry.created_at
+                else None,
                 "existing_retrospective": entry.retrospective,
             },
             "related_transactions": [],
@@ -114,12 +116,14 @@ class JournalManager:
         for symbol in entry.related_symbols:
             txns = self.db.get_transactions(symbol=symbol)
             for t in txns:
-                context["related_transactions"].append({
-                    "symbol": t.symbol,
-                    "action": t.action.value,
-                    "quantity": t.quantity,
-                    "price": t.price,
-                    "executed_at": t.executed_at.isoformat(),
-                })
+                context["related_transactions"].append(
+                    {
+                        "symbol": t.symbol,
+                        "action": t.action.value,
+                        "quantity": t.quantity,
+                        "price": t.price,
+                        "executed_at": t.executed_at.isoformat(),
+                    }
+                )
 
         return context

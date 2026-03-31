@@ -47,11 +47,12 @@ def risk_parity(
         if len(closes) < 2:
             continue
         daily_returns = [
-            (closes[i] - closes[i - 1]) / closes[i - 1]
-            for i in range(1, len(closes))
+            (closes[i] - closes[i - 1]) / closes[i - 1] for i in range(1, len(closes))
         ]
         mean_r = sum(daily_returns) / len(daily_returns)
-        variance = sum((r - mean_r) ** 2 for r in daily_returns) / (len(daily_returns) - 1)
+        variance = sum((r - mean_r) ** 2 for r in daily_returns) / (
+            len(daily_returns) - 1
+        )
         vol = math.sqrt(variance) * math.sqrt(252)  # annualized
         if vol > 0:
             vols[symbol] = vol
@@ -123,7 +124,9 @@ def suggest_allocation(
             "当前使用逆方差加权近似（忽略相关性），持仓超过10个时建议使用 PyPortfolioOpt。"
         )
     else:
-        raise ValueError(f"Unknown method: {method}. Use 'equal_weight', 'risk_parity', or 'min_volatility'.")
+        raise ValueError(
+            f"Unknown method: {method}. Use 'equal_weight', 'risk_parity', or 'min_volatility'."
+        )
 
     return AllocationSuggestion(
         method=method,

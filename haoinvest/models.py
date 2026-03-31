@@ -1,7 +1,6 @@
 """Pydantic models for all entities."""
 
 from datetime import datetime, date
-from decimal import Decimal
 from enum import Enum
 from typing import Optional
 

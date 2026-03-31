@@ -35,14 +35,15 @@ def calculate_risk_metrics(
         )
 
     daily_returns = [
-        (closes[i] - closes[i - 1]) / closes[i - 1]
-        for i in range(1, len(closes))
+        (closes[i] - closes[i - 1]) / closes[i - 1] for i in range(1, len(closes))
     ]
 
     # Annualized volatility (assuming 252 trading days)
     if len(daily_returns) > 1:
         mean_return = sum(daily_returns) / len(daily_returns)
-        variance = sum((r - mean_return) ** 2 for r in daily_returns) / (len(daily_returns) - 1)
+        variance = sum((r - mean_return) ** 2 for r in daily_returns) / (
+            len(daily_returns) - 1
+        )
         daily_vol = math.sqrt(variance)
         ann_vol = daily_vol * math.sqrt(252)
     else:
@@ -97,8 +98,7 @@ def portfolio_correlation(
         if len(closes) < 2:
             continue
         returns = [
-            (closes[i] - closes[i - 1]) / closes[i - 1]
-            for i in range(1, len(closes))
+            (closes[i] - closes[i - 1]) / closes[i - 1] for i in range(1, len(closes))
         ]
         returns_by_symbol[symbol] = returns
 

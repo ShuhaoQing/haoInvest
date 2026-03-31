@@ -12,9 +12,7 @@ class MarketProvider(ABC):
         """Return the latest price in the asset's local currency."""
 
     @abstractmethod
-    def get_price_history(
-        self, symbol: str, start: date, end: date
-    ) -> list[PriceBar]:
+    def get_price_history(self, symbol: str, start: date, end: date) -> list[PriceBar]:
         """Return daily OHLCV bars as PriceBar models."""
 
     @abstractmethod

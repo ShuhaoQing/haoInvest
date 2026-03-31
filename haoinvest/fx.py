@@ -46,8 +46,12 @@ def _get_rate(from_ccy: str, to_ccy: str) -> float:
 
     # Try triangulation through USD
     try:
-        to_usd = _FALLBACK_RATES.get((from_ccy, "USD")) or (1.0 / _FALLBACK_RATES[(("USD", from_ccy))])
-        from_usd = _FALLBACK_RATES.get(("USD", to_ccy)) or (1.0 / _FALLBACK_RATES[((to_ccy, "USD"))])
+        to_usd = _FALLBACK_RATES.get((from_ccy, "USD")) or (
+            1.0 / _FALLBACK_RATES[("USD", from_ccy)]
+        )
+        from_usd = _FALLBACK_RATES.get(("USD", to_ccy)) or (
+            1.0 / _FALLBACK_RATES[(to_ccy, "USD")]
+        )
         return to_usd * from_usd
     except (KeyError, ZeroDivisionError):
         raise ValueError(f"No exchange rate available for {from_ccy} → {to_ccy}")

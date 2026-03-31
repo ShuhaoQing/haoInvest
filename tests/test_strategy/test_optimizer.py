@@ -38,16 +38,24 @@ class TestRiskParity:
 
         for i in range(60):
             trade_date = start + timedelta(days=i)
-            base_a *= (1 + 0.005 * (1 if i % 2 == 0 else -1))
-            bars_a.append(PriceBar(
-                symbol="A", market_type=MarketType.A_SHARE,
-                trade_date=trade_date, close=round(base_a, 2),
-            ))
-            base_b *= (1 + 0.03 * (1 if i % 2 == 0 else -1))
-            bars_b.append(PriceBar(
-                symbol="B", market_type=MarketType.A_SHARE,
-                trade_date=trade_date, close=round(base_b, 2),
-            ))
+            base_a *= 1 + 0.005 * (1 if i % 2 == 0 else -1)
+            bars_a.append(
+                PriceBar(
+                    symbol="A",
+                    market_type=MarketType.A_SHARE,
+                    trade_date=trade_date,
+                    close=round(base_a, 2),
+                )
+            )
+            base_b *= 1 + 0.03 * (1 if i % 2 == 0 else -1)
+            bars_b.append(
+                PriceBar(
+                    symbol="B",
+                    market_type=MarketType.A_SHARE,
+                    trade_date=trade_date,
+                    close=round(base_b, 2),
+                )
+            )
 
         db.save_prices(bars_a)
         db.save_prices(bars_b)
@@ -85,5 +93,6 @@ class TestSuggestAllocation:
 
     def test_unknown_method_raises(self, db: Database):
         import pytest
+
         with pytest.raises(ValueError, match="Unknown method"):
             suggest_allocation(db, [], method="magic")

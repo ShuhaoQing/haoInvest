@@ -67,9 +67,7 @@ class CryptoProvider(MarketProvider):
             raise ValueError(f"Crypto asset {symbol} (id={coin_id}) not found")
         return float(data[coin_id]["usd"])
 
-    def get_price_history(
-        self, symbol: str, start: date, end: date
-    ) -> list[PriceBar]:
+    def get_price_history(self, symbol: str, start: date, end: date) -> list[PriceBar]:
         """Get daily OHLC data for a crypto asset (close prices only from CoinGecko free tier)."""
         coin_id = _to_coingecko_id(symbol)
         start_ts = int(datetime.combine(start, datetime.min.time()).timestamp())
@@ -85,12 +83,14 @@ class CryptoProvider(MarketProvider):
         bars = []
         for ts_ms, price in data.get("prices", []):
             bar_date = datetime.fromtimestamp(ts_ms / 1000).date()
-            bars.append(PriceBar(
-                symbol=symbol,
-                market_type=MarketType.CRYPTO,
-                trade_date=bar_date,
-                close=float(price),
-            ))
+            bars.append(
+                PriceBar(
+                    symbol=symbol,
+                    market_type=MarketType.CRYPTO,
+                    trade_date=bar_date,
+                    close=float(price),
+                )
+            )
         return bars
 
     def get_basic_info(self, symbol: str) -> BasicInfo:

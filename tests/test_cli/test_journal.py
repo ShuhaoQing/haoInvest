@@ -14,14 +14,21 @@ def temp_db(tmp_path, monkeypatch):
 
 
 class TestJournalAdd:
-
     def test_add_entry(self):
-        result = runner.invoke(app, [
-            "journal", "add", "看好茅台长期",
-            "--decision", "buy",
-            "--emotion", "rational",
-            "--symbols", "600519",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "journal",
+                "add",
+                "看好茅台长期",
+                "--decision",
+                "buy",
+                "--emotion",
+                "rational",
+                "--symbols",
+                "600519",
+            ],
+        )
         assert result.exit_code == 0
         assert "entry_id" in result.output
 
@@ -31,26 +38,38 @@ class TestJournalAdd:
         assert "entry_id" in result.output
 
     def test_add_entry_json(self):
-        result = runner.invoke(app, [
-            "journal", "add", "测试内容", "--json",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "journal",
+                "add",
+                "测试内容",
+                "--json",
+            ],
+        )
         assert result.exit_code == 0
         assert '"entry_id"' in result.output
 
 
 class TestJournalList:
-
     def test_list_empty(self):
         result = runner.invoke(app, ["journal", "list"])
         assert result.exit_code == 0
         assert "(no entries)" in result.output
 
     def test_list_after_add(self):
-        runner.invoke(app, [
-            "journal", "add", "测试日记",
-            "--decision", "hold",
-            "--symbols", "600519",
-        ])
+        runner.invoke(
+            app,
+            [
+                "journal",
+                "add",
+                "测试日记",
+                "--decision",
+                "hold",
+                "--symbols",
+                "600519",
+            ],
+        )
         result = runner.invoke(app, ["journal", "list"])
         assert result.exit_code == 0
         assert "测试日记" in result.output
@@ -65,21 +84,36 @@ class TestJournalList:
 
 
 class TestJournalReview:
-
     def test_review_empty(self):
         result = runner.invoke(app, ["journal", "review"])
         assert result.exit_code == 0
         assert "TotalEntries: 0" in result.output
 
     def test_review_with_entries(self):
-        runner.invoke(app, [
-            "journal", "add", "买入茅台",
-            "--decision", "buy", "--emotion", "rational",
-        ])
-        runner.invoke(app, [
-            "journal", "add", "恐慌抛售",
-            "--decision", "sell", "--emotion", "fearful",
-        ])
+        runner.invoke(
+            app,
+            [
+                "journal",
+                "add",
+                "买入茅台",
+                "--decision",
+                "buy",
+                "--emotion",
+                "rational",
+            ],
+        )
+        runner.invoke(
+            app,
+            [
+                "journal",
+                "add",
+                "恐慌抛售",
+                "--decision",
+                "sell",
+                "--emotion",
+                "fearful",
+            ],
+        )
         result = runner.invoke(app, ["journal", "review"])
         assert result.exit_code == 0
         assert "TotalEntries: 2" in result.output

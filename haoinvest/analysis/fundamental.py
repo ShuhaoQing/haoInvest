@@ -30,7 +30,9 @@ def analyze_stock(symbol: str, market_type: MarketType) -> FundamentalAnalysis:
     )
 
 
-def _assess_valuation(pe: float | None, pb: float | None, market_type: MarketType) -> ValuationAssessment:
+def _assess_valuation(
+    pe: float | None, pb: float | None, market_type: MarketType
+) -> ValuationAssessment:
     """Simple valuation assessment based on PE and PB ratios.
 
     This is a rough heuristic for educational purposes, not financial advice.
