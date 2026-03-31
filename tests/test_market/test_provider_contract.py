@@ -18,14 +18,18 @@ class TestAKShareProviderContract:
             "代码": ["600519", "000001"],
             "最新价": [1680.0, 12.5],
         })
-        with patch("haoinvest.market.akshare_provider.ak.stock_zh_a_spot_em", return_value=mock_df):
+        mock_ak = MagicMock()
+        mock_ak.stock_zh_a_spot_em.return_value = mock_df
+        with patch.dict("sys.modules", {"akshare": mock_ak}):
             provider = AKShareProvider()
             price = provider.get_current_price("600519")
             assert price == 1680.0
 
     def test_get_current_price_not_found(self):
         mock_df = pd.DataFrame({"代码": ["000001"], "最新价": [12.5]})
-        with patch("haoinvest.market.akshare_provider.ak.stock_zh_a_spot_em", return_value=mock_df):
+        mock_ak = MagicMock()
+        mock_ak.stock_zh_a_spot_em.return_value = mock_df
+        with patch.dict("sys.modules", {"akshare": mock_ak}):
             provider = AKShareProvider()
             with pytest.raises(ValueError, match="not found"):
                 provider.get_current_price("999999")
@@ -39,7 +43,9 @@ class TestAKShareProviderContract:
             "收盘": [1680.0, 1685.0, 1690.0],
             "成交量": [10000, 12000, 11000],
         })
-        with patch("haoinvest.market.akshare_provider.ak.stock_zh_a_hist", return_value=mock_df):
+        mock_ak = MagicMock()
+        mock_ak.stock_zh_a_hist.return_value = mock_df
+        with patch.dict("sys.modules", {"akshare": mock_ak}):
             provider = AKShareProvider()
             bars = provider.get_price_history("600519", date(2026, 3, 25), date(2026, 3, 27))
             assert len(bars) == 3
@@ -49,13 +55,18 @@ class TestAKShareProviderContract:
     def test_get_basic_info(self):
         mock_df = pd.DataFrame({
             "item": ["股票简称", "行业", "总市值", "市盈率(动态)", "市净率"],
-            "value": ["贵州茅台", "白酒", "2.1万亿", "30.5", "10.2"],
+            "value": ["贵州茅台", "白酒", "2100000000000", "30.5", "10.2"],
         })
-        with patch("haoinvest.market.akshare_provider.ak.stock_individual_info_em", return_value=mock_df):
+        mock_ak = MagicMock()
+        mock_ak.stock_individual_info_em.return_value = mock_df
+        with patch.dict("sys.modules", {"akshare": mock_ak}):
             provider = AKShareProvider()
             info = provider.get_basic_info("600519")
             assert info["name"] == "贵州茅台"
             assert info["currency"] == "CNY"
+            assert info["pe_ratio"] == 30.5
+            assert info["pb_ratio"] == 10.2
+            assert info["total_market_cap"] == 2100000000000
 
 
 class TestCryptoProviderHelpers:
