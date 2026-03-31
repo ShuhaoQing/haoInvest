@@ -23,7 +23,9 @@ def _init_db() -> Database:
     return db
 
 
-def _ensure_prices_cached(db: Database, symbol: str, market_type: MarketType, start: date, end: date) -> None:
+def _ensure_prices_cached(
+    db: Database, symbol: str, market_type: MarketType, start: date, end: date
+) -> None:
     """Fetch and cache price history if not already present."""
     existing = db.get_prices(symbol, market_type, start, end)
     if len(existing) > 10:
@@ -36,9 +38,15 @@ def _ensure_prices_cached(db: Database, symbol: str, market_type: MarketType, st
 
 @app.command()
 def optimize(
-    method: str = typer.Option("risk_parity", "--method", help="equal_weight, risk_parity, or min_volatility"),
-    symbols: Optional[str] = typer.Option(None, "--symbols", "-s", help="Comma-separated symbols (default: all holdings)"),
-    start: Optional[str] = typer.Option(None, "--start", help="Price history start date"),
+    method: str = typer.Option(
+        "risk_parity", "--method", help="equal_weight, risk_parity, or min_volatility"
+    ),
+    symbols: Optional[str] = typer.Option(
+        None, "--symbols", "-s", help="Comma-separated symbols (default: all holdings)"
+    ),
+    start: Optional[str] = typer.Option(
+        None, "--start", help="Price history start date"
+    ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Suggest optimal portfolio allocation."""
@@ -61,7 +69,9 @@ def optimize(
         _ensure_prices_cached(db, symbol, mt, start_date, end_date)
 
     try:
-        result = suggest_allocation(db, pairs, method=method, start_date=start_date, end_date=end_date)
+        result = suggest_allocation(
+            db, pairs, method=method, start_date=start_date, end_date=end_date
+        )
     except ValueError as e:
         error_output(str(e))
         raise typer.Exit(1)
@@ -71,13 +81,21 @@ def optimize(
     else:
         kv_output({"Method": result.method, "Explanation": result.explanation})
         print()
-        rows = [{"Symbol": s, "Weight%": round(w * 100, 2)} for s, w in result.weights.items()]
+        rows = [
+            {"Symbol": s, "Weight%": round(w * 100, 2)}
+            for s, w in result.weights.items()
+        ]
         tsv_output(rows, columns=["Symbol", "Weight%"])
 
 
 @app.command()
 def rebalance(
-    target: Optional[str] = typer.Option(None, "--target", "-t", help='Target weights JSON, e.g. \'{"600519": 0.5, "BTC_USDT": 0.5}\''),
+    target: Optional[str] = typer.Option(
+        None,
+        "--target",
+        "-t",
+        help='Target weights JSON, e.g. \'{"600519": 0.5, "BTC_USDT": 0.5}\'',
+    ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Calculate rebalance trades to reach target allocation."""
@@ -119,5 +137,13 @@ def rebalance(
     else:
         tsv_output(
             trades,
-            columns=["symbol", "action", "quantity", "price", "current_weight", "target_weight", "trade_value"],
+            columns=[
+                "symbol",
+                "action",
+                "quantity",
+                "price",
+                "current_weight",
+                "target_weight",
+                "trade_value",
+            ],
         )

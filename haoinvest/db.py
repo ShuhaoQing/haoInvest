@@ -17,6 +17,7 @@ from .models import (
     TransactionAction,
 )
 
+
 def _parse_datetime(val: str | None) -> datetime | None:
     if val is None:
         return None
@@ -440,10 +441,17 @@ class Database:
         ).fetchone()
         return json.loads(row["result_json"]) if row else None
 
-    def save_analysis(self, symbol: str, analysis_type: str, result: dict, ttl_seconds: int = 14400) -> None:
+    def save_analysis(
+        self, symbol: str, analysis_type: str, result: dict, ttl_seconds: int = 14400
+    ) -> None:
         self.conn.execute(
             """INSERT INTO analysis_cache (symbol, analysis_type, result_json, expires_at)
                VALUES (?, ?, ?, datetime('now', '+' || ? || ' seconds'))""",
-            (symbol, analysis_type, json.dumps(result, ensure_ascii=False, default=str), ttl_seconds),
+            (
+                symbol,
+                analysis_type,
+                json.dumps(result, ensure_ascii=False, default=str),
+                ttl_seconds,
+            ),
         )
         self.conn.commit()

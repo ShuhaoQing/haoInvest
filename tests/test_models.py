@@ -54,4 +54,12 @@ def test_market_type_enum_values():
 
 def test_emotion_enum_has_all_values():
     emotions = {e.value for e in Emotion}
-    assert emotions == {"rational", "greedy", "fearful", "fomo", "uncertain", "confident", "regretful"}
+    assert emotions == {
+        "rational",
+        "greedy",
+        "fearful",
+        "fomo",
+        "uncertain",
+        "confident",
+        "regretful",
+    }

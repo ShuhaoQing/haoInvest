@@ -24,28 +24,30 @@ class USProvider(MarketProvider):
             raise ValueError(f"Cannot fetch current price for {symbol}")
         return float(price)
 
-    def get_price_history(
-        self, symbol: str, start: date, end: date
-    ) -> list[PriceBar]:
+    def get_price_history(self, symbol: str, start: date, end: date) -> list[PriceBar]:
         """Get daily OHLCV bars for a US stock."""
         ticker = yf.Ticker(symbol)
         # yfinance end date is exclusive, so add one day
-        df = ticker.history(start=start.isoformat(), end=(end + timedelta(days=1)).isoformat())
+        df = ticker.history(
+            start=start.isoformat(), end=(end + timedelta(days=1)).isoformat()
+        )
         if df.empty:
             return []
 
         bars = []
         for idx, row in df.iterrows():
-            bars.append(PriceBar(
-                symbol=symbol,
-                market_type=MarketType.US,
-                trade_date=idx.date(),
-                open=float(row["Open"]),
-                high=float(row["High"]),
-                low=float(row["Low"]),
-                close=float(row["Close"]),
-                volume=int(row["Volume"]),
-            ))
+            bars.append(
+                PriceBar(
+                    symbol=symbol,
+                    market_type=MarketType.US,
+                    trade_date=idx.date(),
+                    open=float(row["Open"]),
+                    high=float(row["High"]),
+                    low=float(row["Low"]),
+                    close=float(row["Close"]),
+                    volume=int(row["Volume"]),
+                )
+            )
         return bars
 
     def get_basic_info(self, symbol: str) -> BasicInfo:

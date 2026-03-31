@@ -12,16 +12,26 @@ class TestRebalance:
     def _setup_portfolio(self, db: Database) -> None:
         pm = PortfolioManager(db)
         # 80% in A, 20% in B by cost
-        pm.add_trade(Transaction(
-            symbol="A", market_type=MarketType.A_SHARE,
-            action=TransactionAction.BUY, quantity=80, price=100.0,
-            executed_at=datetime(2026, 1, 1),
-        ))
-        pm.add_trade(Transaction(
-            symbol="B", market_type=MarketType.A_SHARE,
-            action=TransactionAction.BUY, quantity=20, price=100.0,
-            executed_at=datetime(2026, 1, 1),
-        ))
+        pm.add_trade(
+            Transaction(
+                symbol="A",
+                market_type=MarketType.A_SHARE,
+                action=TransactionAction.BUY,
+                quantity=80,
+                price=100.0,
+                executed_at=datetime(2026, 1, 1),
+            )
+        )
+        pm.add_trade(
+            Transaction(
+                symbol="B",
+                market_type=MarketType.A_SHARE,
+                action=TransactionAction.BUY,
+                quantity=20,
+                price=100.0,
+                executed_at=datetime(2026, 1, 1),
+            )
+        )
 
     def test_rebalance_to_equal_weight(self, db: Database):
         self._setup_portfolio(db)

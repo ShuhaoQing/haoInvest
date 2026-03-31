@@ -20,6 +20,8 @@ uv sync                              # Install dependencies
 pytest                               # Run all tests
 pytest -m "not integration"          # Skip tests that call external APIs
 pytest tests/test_fx.py              # Single module
+uv run ruff check .                  # Lint
+uv run ruff format --check .         # Format check
 ```
 
 ## Project Structure
@@ -52,7 +54,14 @@ haoinvest/
 - Always use `uv add`, never `pip install`
 - Pin ALL dependencies with `==` to the latest stable version (e.g., `requests==2.32.3`)
 - Never use `>=`, `~=`, or unpinned versions — reproducibility is non-negotiable
-- Before adding a dependency, verify the latest version exists on PyPI
+- Before adding a dependency, run `uv pip index versions <pkg>` or check PyPI to confirm the actual latest version — never guess or rely on memory
+- Prefer the most recent stable version of a library if it is compatible with the project
+
+### Git Workflow
+
+- The `main` branch is protected — never push directly to `main`
+- All changes must go through a PR: create a feature branch first, then open a PR
+- Branch naming: `feat/short-desc`, `fix/short-desc`
 
 ### Code Style
 

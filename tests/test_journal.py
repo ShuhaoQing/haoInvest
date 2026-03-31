@@ -4,7 +4,13 @@ from datetime import datetime
 
 from haoinvest.db import Database
 from haoinvest.journal import JournalManager
-from haoinvest.models import DecisionType, Emotion, MarketType, Transaction, TransactionAction
+from haoinvest.models import (
+    DecisionType,
+    Emotion,
+    MarketType,
+    Transaction,
+    TransactionAction,
+)
 from haoinvest.portfolio.manager import PortfolioManager
 
 
@@ -61,11 +67,16 @@ class TestDecisionStats:
 class TestRetrospectiveContext:
     def test_with_related_transactions(self, db: Database):
         pm = PortfolioManager(db)
-        pm.add_trade(Transaction(
-            symbol="600519", market_type=MarketType.A_SHARE,
-            action=TransactionAction.BUY, quantity=100, price=1680.0,
-            executed_at=datetime(2026, 3, 28),
-        ))
+        pm.add_trade(
+            Transaction(
+                symbol="600519",
+                market_type=MarketType.A_SHARE,
+                action=TransactionAction.BUY,
+                quantity=100,
+                price=1680.0,
+                executed_at=datetime(2026, 3, 28),
+            )
+        )
 
         jm = JournalManager(db)
         entry_id = jm.create_entry(

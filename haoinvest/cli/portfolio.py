@@ -40,20 +40,34 @@ def list_holdings(
     else:
         tsv_output(
             summary,
-            columns=["symbol", "market_type", "quantity", "avg_cost", "position_cost", "allocation_pct", "currency"],
+            columns=[
+                "symbol",
+                "market_type",
+                "quantity",
+                "avg_cost",
+                "position_cost",
+                "allocation_pct",
+                "currency",
+            ],
         )
 
 
 @app.command("add-trade")
 def add_trade(
     symbol: str = typer.Argument(help="Stock/crypto symbol"),
-    action: str = typer.Argument(help="buy, sell, dividend, split, transfer_in, transfer_out"),
+    action: str = typer.Argument(
+        help="buy, sell, dividend, split, transfer_in, transfer_out"
+    ),
     quantity: float = typer.Argument(help="Number of units"),
     price: float = typer.Argument(help="Price per unit"),
-    market_type: Optional[str] = typer.Option(None, "--market-type", "-m", help="Override: a_share, crypto, us"),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
     fee: float = typer.Option(0.0, "--fee", help="Commission/fee"),
     tax: float = typer.Option(0.0, "--tax", help="Stamp tax"),
-    date: Optional[str] = typer.Option(None, "--date", "-d", help="Date YYYY-MM-DD (default: now)"),
+    date: Optional[str] = typer.Option(
+        None, "--date", "-d", help="Date YYYY-MM-DD (default: now)"
+    ),
     currency: str = typer.Option("CNY", "--currency", help="Currency code"),
     note: str = typer.Option("", "--note", "-n", help="Trade note"),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
@@ -64,7 +78,9 @@ def add_trade(
     try:
         txn_action = TransactionAction(action)
     except ValueError:
-        error_output(f"Invalid action: {action}. Use: buy, sell, dividend, split, transfer_in, transfer_out")
+        error_output(
+            f"Invalid action: {action}. Use: buy, sell, dividend, split, transfer_in, transfer_out"
+        )
         raise typer.Exit(1)
 
     executed_at = datetime.fromisoformat(date) if date else datetime.now()
@@ -86,7 +102,13 @@ def add_trade(
     pm = PortfolioManager(db)
     txn_id = pm.add_trade(txn)
 
-    result = {"transaction_id": txn_id, "symbol": symbol, "action": action, "quantity": quantity, "price": price}
+    result = {
+        "transaction_id": txn_id,
+        "symbol": symbol,
+        "action": action,
+        "quantity": quantity,
+        "price": price,
+    }
 
     if use_json:
         json_output(result)
@@ -96,8 +118,12 @@ def add_trade(
 
 @app.command()
 def returns(
-    symbol: Optional[str] = typer.Option(None, "--symbol", "-s", help="Specific symbol (default: all holdings)"),
-    market_type: Optional[str] = typer.Option(None, "--market-type", "-m", help="Override: a_share, crypto, us"),
+    symbol: Optional[str] = typer.Option(
+        None, "--symbol", "-s", help="Specific symbol (default: all holdings)"
+    ),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """View returns — unrealized P&L for holdings."""
@@ -131,7 +157,9 @@ def returns(
         for pos in positions:
             try:
                 provider = get_provider(pos.market_type)
-                prices[(pos.symbol, pos.market_type)] = provider.get_current_price(pos.symbol)
+                prices[(pos.symbol, pos.market_type)] = provider.get_current_price(
+                    pos.symbol
+                )
             except Exception as e:
                 error_output(f"Failed to get price for {pos.symbol}: {e}")
 
@@ -140,14 +168,24 @@ def returns(
         if use_json:
             json_output(summary)
         else:
-            kv_output({
-                "TotalMarketValue": summary.total_market_value,
-                "TotalCostBasis": summary.total_cost_basis,
-                "TotalUnrealizedPnL": summary.total_unrealized_pnl,
-                "TotalUnrealizedPnL%": summary.total_unrealized_pnl_pct,
-            })
+            kv_output(
+                {
+                    "TotalMarketValue": summary.total_market_value,
+                    "TotalCostBasis": summary.total_cost_basis,
+                    "TotalUnrealizedPnL": summary.total_unrealized_pnl,
+                    "TotalUnrealizedPnL%": summary.total_unrealized_pnl_pct,
+                }
+            )
             print()
             tsv_output(
                 summary.holdings,
-                columns=["symbol", "market_type", "quantity", "avg_cost", "current_price", "unrealized_pnl", "unrealized_pnl_pct"],
+                columns=[
+                    "symbol",
+                    "market_type",
+                    "quantity",
+                    "avg_cost",
+                    "current_price",
+                    "unrealized_pnl",
+                    "unrealized_pnl_pct",
+                ],
             )

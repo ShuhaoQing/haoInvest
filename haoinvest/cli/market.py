@@ -24,8 +24,12 @@ def _detect_market_type(symbol: str) -> MarketType:
 
 @app.command()
 def quote(
-    symbol: str = typer.Argument(help="Stock/crypto symbol, e.g. 600519, BTC_USDT, AAPL"),
-    market_type: Optional[str] = typer.Option(None, "--market-type", "-m", help="Override: a_share, crypto, us"),
+    symbol: str = typer.Argument(
+        help="Stock/crypto symbol, e.g. 600519, BTC_USDT, AAPL"
+    ),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Get current price and basic info for a symbol."""
@@ -59,9 +63,15 @@ def quote(
 @app.command()
 def history(
     symbol: str = typer.Argument(help="Stock/crypto symbol"),
-    start: Optional[str] = typer.Option(None, "--start", "-s", help="Start date YYYY-MM-DD (default: 30 days ago)"),
-    end: Optional[str] = typer.Option(None, "--end", "-e", help="End date YYYY-MM-DD (default: today)"),
-    market_type: Optional[str] = typer.Option(None, "--market-type", "-m", help="Override: a_share, crypto, us"),
+    start: Optional[str] = typer.Option(
+        None, "--start", "-s", help="Start date YYYY-MM-DD (default: 30 days ago)"
+    ),
+    end: Optional[str] = typer.Option(
+        None, "--end", "-e", help="End date YYYY-MM-DD (default: today)"
+    ),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Get daily OHLCV price history for a symbol."""
@@ -79,4 +89,6 @@ def history(
     if use_json:
         json_output(bars)
     else:
-        tsv_output(bars, columns=["trade_date", "open", "high", "low", "close", "volume"])
+        tsv_output(
+            bars, columns=["trade_date", "open", "high", "low", "close", "volume"]
+        )

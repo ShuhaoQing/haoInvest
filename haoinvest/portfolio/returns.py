@@ -1,7 +1,5 @@
 """Returns calculation: TWR, realized/unrealized P&L."""
 
-from datetime import datetime
-
 from ..config import ZERO_THRESHOLD
 from ..db import Database
 from ..models import (
@@ -41,9 +39,7 @@ def unrealized_pnl(
     )
 
 
-def realized_pnl(
-    db: Database, symbol: str, market_type: MarketType
-) -> RealizedPnL:
+def realized_pnl(db: Database, symbol: str, market_type: MarketType) -> RealizedPnL:
     """Calculate realized P&L from completed sell transactions.
 
     Uses weighted average cost at time of each sell.
@@ -71,12 +67,14 @@ def realized_pnl(
             realized += sell_proceeds - cost_of_sold
 
             sell_ratio = min(txn.quantity / quantity, 1.0)
-            total_cost *= (1 - sell_ratio)
+            total_cost *= 1 - sell_ratio
             quantity -= txn.quantity
             num_sells += 1
 
         elif txn.action == TransactionAction.DIVIDEND:
-            dividends += txn.quantity * txn.price  # quantity=shares, price=dividend per share
+            dividends += (
+                txn.quantity * txn.price
+            )  # quantity=shares, price=dividend per share
 
         elif txn.action == TransactionAction.SPLIT:
             quantity *= txn.price
@@ -89,7 +87,7 @@ def realized_pnl(
             if abs(quantity) < ZERO_THRESHOLD:
                 continue
             sell_ratio = min(txn.quantity / quantity, 1.0)
-            total_cost *= (1 - sell_ratio)
+            total_cost *= 1 - sell_ratio
             quantity -= txn.quantity
 
     return RealizedPnL(
@@ -126,17 +124,19 @@ def portfolio_returns_summary(
         total_market_value += mv
         total_cost_basis += cb
 
-        holdings.append(HoldingSummary(
-            symbol=pos.symbol,
-            market_type=pos.market_type.value,
-            quantity=pos.cached_quantity,
-            avg_cost=pos.cached_avg_cost,
-            current_price=price,
-            market_value=round(mv, 2),
-            cost_basis=round(cb, 2),
-            unrealized_pnl=round(pnl, 2),
-            unrealized_pnl_pct=round(pnl_pct, 2),
-        ))
+        holdings.append(
+            HoldingSummary(
+                symbol=pos.symbol,
+                market_type=pos.market_type.value,
+                quantity=pos.cached_quantity,
+                avg_cost=pos.cached_avg_cost,
+                current_price=price,
+                market_value=round(mv, 2),
+                cost_basis=round(cb, 2),
+                unrealized_pnl=round(pnl, 2),
+                unrealized_pnl_pct=round(pnl_pct, 2),
+            )
+        )
 
     total_pnl = total_market_value - total_cost_basis
     total_pnl_pct = (total_pnl / total_cost_basis * 100) if total_cost_basis > 0 else 0

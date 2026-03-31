@@ -21,7 +21,9 @@ def get_db_path() -> Path:
 AKSHARE_TIMEOUT = int(os.environ.get("HAOINVEST_AKSHARE_TIMEOUT", "30"))
 
 # Cache expiry in seconds
-ANALYSIS_CACHE_TTL = int(os.environ.get("HAOINVEST_CACHE_TTL", str(3600 * 4)))  # 4 hours
+ANALYSIS_CACHE_TTL = int(
+    os.environ.get("HAOINVEST_CACHE_TTL", str(3600 * 4))
+)  # 4 hours
 PRICE_CACHE_TTL = int(os.environ.get("HAOINVEST_PRICE_CACHE_TTL", str(3600)))  # 1 hour
 
 # Precision rules

@@ -7,17 +7,23 @@ import pandas as pd
 import pytest
 
 from haoinvest.market.akshare_provider import AKShareProvider
-from haoinvest.market.crypto_provider import CryptoProvider, _normalize_symbol, _to_coingecko_id
+from haoinvest.market.crypto_provider import (
+    CryptoProvider,
+    _normalize_symbol,
+    _to_coingecko_id,
+)
 
 
 class TestAKShareProviderContract:
     """Test AKShareProvider with mocked AKShare responses."""
 
     def test_get_current_price(self):
-        mock_df = pd.DataFrame({
-            "代码": ["600519", "000001"],
-            "最新价": [1680.0, 12.5],
-        })
+        mock_df = pd.DataFrame(
+            {
+                "代码": ["600519", "000001"],
+                "最新价": [1680.0, 12.5],
+            }
+        )
         mock_ak = MagicMock()
         mock_ak.stock_zh_a_spot_em.return_value = mock_df
         with patch.dict("sys.modules", {"akshare": mock_ak}):
@@ -35,28 +41,34 @@ class TestAKShareProviderContract:
                 provider.get_current_price("999999")
 
     def test_get_price_history(self):
-        mock_df = pd.DataFrame({
-            "日期": ["2026-03-25", "2026-03-26", "2026-03-27"],
-            "开盘": [1670.0, 1675.0, 1680.0],
-            "最高": [1685.0, 1690.0, 1695.0],
-            "最低": [1665.0, 1670.0, 1675.0],
-            "收盘": [1680.0, 1685.0, 1690.0],
-            "成交量": [10000, 12000, 11000],
-        })
+        mock_df = pd.DataFrame(
+            {
+                "日期": ["2026-03-25", "2026-03-26", "2026-03-27"],
+                "开盘": [1670.0, 1675.0, 1680.0],
+                "最高": [1685.0, 1690.0, 1695.0],
+                "最低": [1665.0, 1670.0, 1675.0],
+                "收盘": [1680.0, 1685.0, 1690.0],
+                "成交量": [10000, 12000, 11000],
+            }
+        )
         mock_ak = MagicMock()
         mock_ak.stock_zh_a_hist.return_value = mock_df
         with patch.dict("sys.modules", {"akshare": mock_ak}):
             provider = AKShareProvider()
-            bars = provider.get_price_history("600519", date(2026, 3, 25), date(2026, 3, 27))
+            bars = provider.get_price_history(
+                "600519", date(2026, 3, 25), date(2026, 3, 27)
+            )
             assert len(bars) == 3
             assert bars[0].close == 1680.0
             assert bars[0].trade_date == date(2026, 3, 25)
 
     def test_get_basic_info(self):
-        mock_df = pd.DataFrame({
-            "item": ["股票简称", "行业", "总市值", "市盈率(动态)", "市净率"],
-            "value": ["贵州茅台", "白酒", "2100000000000", "30.5", "10.2"],
-        })
+        mock_df = pd.DataFrame(
+            {
+                "item": ["股票简称", "行业", "总市值", "市盈率(动态)", "市净率"],
+                "value": ["贵州茅台", "白酒", "2100000000000", "30.5", "10.2"],
+            }
+        )
         mock_ak = MagicMock()
         mock_ak.stock_individual_info_em.return_value = mock_df
         with patch.dict("sys.modules", {"akshare": mock_ak}):
