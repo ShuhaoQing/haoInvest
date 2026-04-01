@@ -27,7 +27,11 @@ def full_stock_report(
     Results are cached in the database.
     """
     date_suffix = f"_{price_start}_{price_end}" if (price_start or price_end) else ""
-    cache_key = f"full_report_tech{date_suffix}" if include_technical else f"full_report{date_suffix}"
+    cache_key = (
+        f"full_report_tech{date_suffix}"
+        if include_technical
+        else f"full_report{date_suffix}"
+    )
     cached = db.get_cached_analysis(symbol, cache_key)
     if cached:
         return StockReport.model_validate(cached)

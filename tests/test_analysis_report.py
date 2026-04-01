@@ -35,11 +35,12 @@ class TestFullStockReportCacheKey:
         risk_2024 = RiskMetrics(num_days=252, total_return_pct=20.0)
         risk_2023 = RiskMetrics(num_days=252, total_return_pct=-5.0)
 
-        with patch(
-            "haoinvest.analysis.report.analyze_stock", return_value=fundamental
-        ), patch(
-            "haoinvest.analysis.report.calculate_risk_metrics",
-            side_effect=[risk_2024, risk_2023],
+        with (
+            patch("haoinvest.analysis.report.analyze_stock", return_value=fundamental),
+            patch(
+                "haoinvest.analysis.report.calculate_risk_metrics",
+                side_effect=[risk_2024, risk_2023],
+            ),
         ):
             report_2024 = full_stock_report(
                 db,
@@ -64,11 +65,14 @@ class TestFullStockReportCacheKey:
         fundamental = _make_fundamental()
         risk = _make_risk()
 
-        with patch(
-            "haoinvest.analysis.report.analyze_stock", return_value=fundamental
-        ) as mock_fundamental, patch(
-            "haoinvest.analysis.report.calculate_risk_metrics", return_value=risk
-        ) as mock_risk:
+        with (
+            patch(
+                "haoinvest.analysis.report.analyze_stock", return_value=fundamental
+            ) as mock_fundamental,
+            patch(
+                "haoinvest.analysis.report.calculate_risk_metrics", return_value=risk
+            ) as mock_risk,
+        ):
             full_stock_report(
                 db,
                 "AAPL",
@@ -92,10 +96,13 @@ class TestFullStockReportCacheKey:
         fundamental = _make_fundamental()
         risk = _make_risk()
 
-        with patch(
-            "haoinvest.analysis.report.analyze_stock", return_value=fundamental
-        ) as mock_fundamental, patch(
-            "haoinvest.analysis.report.calculate_risk_metrics", return_value=risk
+        with (
+            patch(
+                "haoinvest.analysis.report.analyze_stock", return_value=fundamental
+            ) as mock_fundamental,
+            patch(
+                "haoinvest.analysis.report.calculate_risk_metrics", return_value=risk
+            ),
         ):
             full_stock_report(db, "AAPL", MarketType.US)
             full_stock_report(db, "AAPL", MarketType.US)
