@@ -227,7 +227,7 @@ class TestAnalyzeTechnical:
         assert result.rsi.explanation is not None
 
     def test_partial_data_warning_14_to_19_days(self, db):
-        """14–19 days: RSI available, MACD and Bollinger not — should warn about both."""
+        """17 days (14–19 range): RSI available (needs 15+), MACD and Bollinger not — should warn about both."""
         _seed_prices(db, days=17)
         result = analyze_technical(db, "TEST", MarketType.A_SHARE)
         assert result.message is not None

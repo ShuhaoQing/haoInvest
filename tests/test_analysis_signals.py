@@ -136,3 +136,6 @@ class TestAggregateSignalsPartialData:
         assert result.details == []
         assert result.bullish_count == 0
         assert result.bearish_count == 0
+        # Confirm no indicators voted (early-return path in aggregate_signals)
+        assert result.overall_signal == "中性"  # default when no votes counted
+        assert result.explanation is None  # verbose=False by default
