@@ -107,3 +107,35 @@ class TestSignalAggregation:
         result = aggregate_signals(db, "VERB", MarketType.A_SHARE, verbose=True)
         assert result.explanation is not None
         assert "综合信号" in result.explanation
+
+
+class TestAggregateSignalsPartialData:
+    def test_partial_data_returns_graceful_summary(self, db):
+        """With 14–25 days, aggregate_signals returns a summary with no overall signal."""
+        base_date = date(2025, 1, 1)
+        bars = []
+        price = 100.0
+        for i in range(22):
+            bars.append(
+                PriceBar(
+                    symbol="TEST",
+                    market_type=MarketType.A_SHARE,
+                    trade_date=base_date + timedelta(days=i),
+                    open=price * 0.998,
+                    high=price * 1.01,
+                    low=price * 0.99,
+                    close=price,
+                    volume=1000000.0,
+                )
+            )
+            price *= 1.005
+        db.save_prices(bars)
+        result = aggregate_signals(db, "TEST", MarketType.A_SHARE)
+        # No crash; when tech.message is set, signals.py returns early with no votes
+        assert result.symbol == "TEST"
+        assert result.details == []
+        assert result.bullish_count == 0
+        assert result.bearish_count == 0
+        # Confirm no indicators voted (early-return path in aggregate_signals)
+        assert result.overall_signal == "中性"  # default when no votes counted
+        assert result.explanation is None  # verbose=False by default

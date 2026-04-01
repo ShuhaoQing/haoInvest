@@ -186,6 +186,15 @@ def analyze_technical(
         explanation=bb_explanation,
     )
 
+    # Warn when some indicators are unavailable due to insufficient data.
+    # MACD needs 26+ days; Bollinger needs 20+ days.
+    missing: list[str] = []
+    if macd.macd_line is None:
+        missing.append(f"MACD (需要 26 天，当前 {len(closes)} 天)")
+    if bollinger.upper is None:
+        missing.append(f"布林带 (需要 20 天，当前 {len(closes)} 天)")
+    warning = f"部分指标不可用: {'; '.join(missing)}" if missing else None
+
     return TechnicalIndicators(
         symbol=symbol,
         market_type=mt_str,
@@ -195,4 +204,5 @@ def analyze_technical(
         macd=macd,
         rsi=rsi,
         bollinger=bollinger,
+        message=warning,
     )

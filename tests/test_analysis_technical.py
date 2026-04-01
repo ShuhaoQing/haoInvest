@@ -226,6 +226,32 @@ class TestAnalyzeTechnical:
         assert result.moving_averages.explanation is not None
         assert result.rsi.explanation is not None
 
+    def test_partial_data_warning_14_to_19_days(self, db):
+        """17 days (14–19 range): RSI available (needs 15+), MACD and Bollinger not — should warn about both."""
+        _seed_prices(db, days=17)
+        result = analyze_technical(db, "TEST", MarketType.A_SHARE)
+        assert result.message is not None
+        assert "MACD" in result.message
+        assert "布林带" in result.message
+        # RSI is still computed
+        assert result.rsi.rsi is not None
+
+    def test_partial_data_warning_20_to_25_days(self, db):
+        """20–25 days: RSI and Bollinger available, MACD not — should warn about MACD only."""
+        _seed_prices(db, days=22)
+        result = analyze_technical(db, "TEST", MarketType.A_SHARE)
+        assert result.message is not None
+        assert "MACD" in result.message
+        assert "布林带" not in result.message
+        # Bollinger is computed
+        assert result.bollinger.upper is not None
+
+    def test_no_warning_with_sufficient_data(self, db):
+        """26+ days: all indicators available — message should be None."""
+        _seed_prices(db, days=60)
+        result = analyze_technical(db, "TEST", MarketType.A_SHARE)
+        assert result.message is None
+
     def test_math_helpers_not_in_technical_namespace(self):
         """Math helpers should live in math_utils, not technical."""
         import haoinvest.analysis.technical as t
