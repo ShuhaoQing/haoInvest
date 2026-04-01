@@ -12,6 +12,17 @@ from ..models import (
 
 
 class PortfolioManager:
+    """Transaction-driven portfolio manager.
+
+    Positions are derived data: the source of truth is always the transactions
+    table. cached_quantity and cached_avg_cost are recalculated on every trade
+    via _sync_position(). Use rebuild_all_positions() to recalculate all
+    positions from scratch (e.g., after importing historical transactions).
+
+    Uses weighted average cost method: buys increase avg_cost proportionally,
+    sells reduce quantity but leave avg_cost unchanged.
+    """
+
     def __init__(self, db: Database) -> None:
         self.db = db
 
