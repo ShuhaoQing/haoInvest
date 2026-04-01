@@ -114,6 +114,13 @@ CREATE TABLE IF NOT EXISTS analysis_cache (
 
 
 class Database:
+    """SQLite repository for all haoInvest data.
+
+    Uses WAL journal mode for concurrent read access and row_factory=sqlite3.Row
+    for dict-like row access. Schema is auto-created via init_schema().
+    All write methods commit immediately (auto-commit per operation).
+    """
+
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = db_path or get_db_path()
         self._conn: Optional[sqlite3.Connection] = None

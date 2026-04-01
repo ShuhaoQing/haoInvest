@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 
 
 class MarketType(str, Enum):
+    """Supported market types for position tracking and data providers."""
+
     A_SHARE = "a_share"
     CRYPTO = "crypto"
     HK = "hk"
@@ -15,6 +17,8 @@ class MarketType(str, Enum):
 
 
 class TransactionAction(str, Enum):
+    """Trade action types. BUY/SELL are market trades; DIVIDEND/SPLIT are corporate events."""
+
     BUY = "buy"
     SELL = "sell"
     DIVIDEND = "dividend"
@@ -24,6 +28,8 @@ class TransactionAction(str, Enum):
 
 
 class DecisionType(str, Enum):
+    """Investment decision categories for journal entries."""
+
     BUY = "buy"
     SELL = "sell"
     HOLD = "hold"
@@ -32,6 +38,8 @@ class DecisionType(str, Enum):
 
 
 class Emotion(str, Enum):
+    """Self-reported emotional state when making investment decisions."""
+
     RATIONAL = "rational"
     GREEDY = "greedy"
     FEARFUL = "fearful"
@@ -42,55 +50,86 @@ class Emotion(str, Enum):
 
 
 class Position(BaseModel):
+    """A tracked investment position. Cached fields are derived from transactions."""
+
     id: Optional[int] = None
     symbol: str
     market_type: MarketType
     currency: str = "CNY"
-    cached_quantity: float = 0.0
-    cached_avg_cost: float = 0.0
-    last_synced_at: Optional[datetime] = None
+    cached_quantity: float = Field(
+        default=0.0, description="Derived from transactions; not the source of truth"
+    )
+    cached_avg_cost: float = Field(
+        default=0.0,
+        description="Weighted average cost per share, recalculated from transactions",
+    )
+    last_synced_at: Optional[datetime] = Field(
+        default=None,
+        description="Timestamp of last position recalculation from transactions",
+    )
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
 
 class Transaction(BaseModel):
+    """A single trade or corporate event. Source of truth for position accounting."""
+
     id: Optional[int] = None
     symbol: str
     market_type: MarketType
     action: TransactionAction
     quantity: float
     price: float
-    fee: float = 0.0
-    tax: float = 0.0
+    fee: float = Field(default=0.0, description="Broker commission fee")
+    tax: float = Field(
+        default=0.0, description="Stamp duty or other tax (e.g., A-share sell tax)"
+    )
     currency: str = "CNY"
-    exchange_rate: float = 1.0
+    exchange_rate: float = Field(
+        default=1.0,
+        description="Conversion rate to base currency (CNY); 1.0 for A-shares",
+    )
     executed_at: datetime
     note: Optional[str] = None
     created_at: Optional[datetime] = None
 
 
 class JournalEntry(BaseModel):
+    """An investment journal entry for decision tracking and emotional awareness."""
+
     id: Optional[int] = None
     content: str
     decision_type: Optional[DecisionType] = None
     emotion: Optional[Emotion] = None
     related_symbols: list[str] = Field(default_factory=list)
-    retrospective: Optional[str] = None
+    retrospective: Optional[str] = Field(
+        default=None,
+        description="Post-hoc reflection added after the outcome is known",
+    )
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
 
 class DailySnapshot(BaseModel):
+    """A daily point-in-time record of portfolio value for performance tracking."""
+
     id: Optional[int] = None
     snapshot_date: date
-    total_value_cny: float
+    total_value_cny: float = Field(
+        description="Total portfolio market value in CNY at snapshot date"
+    )
     total_cost_cny: float
     cash_balance: float = 0.0
-    positions_json: str = "{}"
+    positions_json: str = Field(
+        default="{}",
+        description="JSON-serialized dict of {symbol: {quantity, value}} at snapshot time",
+    )
     created_at: Optional[datetime] = None
 
 
 class PriceBar(BaseModel):
+    """OHLCV price data for a single trading day, cached from market providers."""
+
     symbol: str
     market_type: MarketType
     trade_date: date
@@ -105,6 +144,8 @@ class PriceBar(BaseModel):
 
 
 class BasicInfo(BaseModel):
+    """Asset metadata from market data providers (name, sector, valuation ratios)."""
+
     name: str = ""
     sector: str = ""
     currency: str = "CNY"
@@ -113,19 +154,25 @@ class BasicInfo(BaseModel):
     pb_ratio: Optional[float] = None
     market_cap: Optional[int] = None
     total_market_cap: Optional[int] = None
-    total_supply: Optional[float] = None
+    total_supply: Optional[float] = Field(
+        default=None, description="Total token supply (crypto only)"
+    )
 
 
 # --- Analysis models ---
 
 
 class ValuationAssessment(BaseModel):
+    """PE/PB-based valuation assessment with Chinese labels."""
+
     pe_assessment: str = "N/A"
     pb_assessment: str = "N/A"
     overall: str = "无法评估"
 
 
 class FundamentalAnalysis(BaseModel):
+    """Fundamental analysis result for a single stock (PE/PB, valuation)."""
+
     symbol: str
     name: str = ""
     sector: str = ""
@@ -139,15 +186,24 @@ class FundamentalAnalysis(BaseModel):
 
 
 class RiskMetrics(BaseModel):
+    """Risk metrics computed from price history (volatility, drawdown, Sharpe)."""
+
     annualized_volatility: Optional[float] = None
     max_drawdown_pct: Optional[float] = None
     sharpe_ratio: Optional[float] = None
     total_return_pct: Optional[float] = None
-    num_days: int = 0
-    message: Optional[str] = None
+    num_days: int = Field(
+        default=0, description="Number of trading days in the analysis window"
+    )
+    message: Optional[str] = Field(
+        default=None,
+        description="Warning message when data is insufficient for calculation",
+    )
 
 
 class StockReport(BaseModel):
+    """Combined fundamental analysis and risk metrics for a single stock."""
+
     symbol: str
     name: str = ""
     sector: str = ""
@@ -159,12 +215,123 @@ class StockReport(BaseModel):
     total_market_cap: Optional[int] = None
     valuation: ValuationAssessment = Field(default_factory=ValuationAssessment)
     risk_metrics: RiskMetrics = Field(default_factory=RiskMetrics)
+    technical: Optional["TechnicalIndicators"] = None
+    volume: Optional["VolumeAnalysis"] = None
+    signals: Optional["SignalSummary"] = None
+
+
+# --- Technical analysis models ---
+
+
+class MovingAverages(BaseModel):
+    """Moving average values at the most recent data point."""
+
+    sma_5: Optional[float] = None
+    sma_10: Optional[float] = None
+    sma_20: Optional[float] = None
+    sma_60: Optional[float] = None
+    ema_12: Optional[float] = None
+    ema_26: Optional[float] = None
+    trend: str = Field(
+        default="无法判断", description="Trend assessment: 上升趋势/下降趋势/震荡"
+    )
+    explanation: Optional[str] = Field(
+        default=None, description="Chinese explanation of trend logic (verbose mode)"
+    )
+
+
+class MACDResult(BaseModel):
+    """MACD indicator values at the most recent data point."""
+
+    macd_line: Optional[float] = None
+    signal_line: Optional[float] = None
+    histogram: Optional[float] = Field(
+        default=None, description="MACD - signal; positive = bullish momentum"
+    )
+    signal: str = Field(default="无信号", description="金叉/死叉/无信号")
+    explanation: Optional[str] = None
+
+
+class RSIResult(BaseModel):
+    """Relative Strength Index over the configured period."""
+
+    rsi: Optional[float] = None
+    period: int = 14
+    assessment: str = Field(default="无法判断", description="超买/超卖/中性")
+    explanation: Optional[str] = None
+
+
+class BollingerBands(BaseModel):
+    """Bollinger Bands at the most recent data point."""
+
+    upper: Optional[float] = None
+    middle: Optional[float] = None
+    lower: Optional[float] = None
+    bandwidth_pct: Optional[float] = Field(
+        default=None, description="(upper - lower) / middle * 100"
+    )
+    position: str = Field(
+        default="无法判断", description="价格位于上轨附近/中轨附近/下轨附近"
+    )
+    explanation: Optional[str] = None
+
+
+class TechnicalIndicators(BaseModel):
+    """Aggregated technical indicator results for a single stock."""
+
+    symbol: str
+    market_type: str
+    latest_close: Optional[float] = None
+    latest_date: Optional[date] = None
+    moving_averages: MovingAverages = Field(default_factory=MovingAverages)
+    macd: MACDResult = Field(default_factory=MACDResult)
+    rsi: RSIResult = Field(default_factory=RSIResult)
+    bollinger: BollingerBands = Field(default_factory=BollingerBands)
+    message: Optional[str] = Field(
+        default=None, description="Warning if insufficient data"
+    )
+
+
+class VolumeAnalysis(BaseModel):
+    """Volume anomaly and turnover analysis."""
+
+    symbol: str
+    market_type: str
+    latest_volume: Optional[float] = None
+    avg_volume_20d: Optional[float] = None
+    volume_ratio: Optional[float] = Field(
+        default=None, description="latest_volume / avg_volume_20d"
+    )
+    is_anomaly: bool = Field(default=False, description="True if volume_ratio > 2.0")
+    assessment: str = Field(default="正常", description="放量/缩量/正常")
+    explanation: Optional[str] = None
+    message: Optional[str] = None
+
+
+class SignalSummary(BaseModel):
+    """Aggregated signal from all technical indicators via vote counting."""
+
+    symbol: str
+    market_type: str
+    overall_signal: str = Field(default="中性", description="偏多/偏空/中性")
+    confidence: str = Field(
+        default="低", description="高/中/低 based on indicator agreement"
+    )
+    bullish_count: int = 0
+    bearish_count: int = 0
+    neutral_count: int = 0
+    details: list[str] = Field(
+        default_factory=list, description="Per-indicator signal descriptions"
+    )
+    explanation: Optional[str] = None
 
 
 # --- Portfolio models ---
 
 
 class UnrealizedPnL(BaseModel):
+    """Mark-to-market unrealized profit/loss for a single position."""
+
     quantity: float = 0
     avg_cost: float = 0
     current_price: float = 0
@@ -174,12 +341,16 @@ class UnrealizedPnL(BaseModel):
 
 
 class RealizedPnL(BaseModel):
+    """Realized profit/loss from completed sell transactions."""
+
     total_realized_pnl: float = 0
     total_dividends: float = 0
     num_sell_trades: int = 0
 
 
 class HoldingSummary(BaseModel):
+    """Per-holding breakdown within a portfolio summary."""
+
     symbol: str
     market_type: str
     quantity: float
@@ -187,14 +358,20 @@ class HoldingSummary(BaseModel):
     current_price: float = 0
     market_value: float = 0
     cost_basis: float = 0
-    position_cost: float = 0
-    allocation_pct: float = 0
+    position_cost: float = Field(
+        default=0, description="quantity * avg_cost; total cost basis for this holding"
+    )
+    allocation_pct: float = Field(
+        default=0, description="Percentage of total portfolio market value"
+    )
     currency: str = "CNY"
     unrealized_pnl: float = 0
     unrealized_pnl_pct: float = 0
 
 
 class PortfolioSummary(BaseModel):
+    """Aggregated portfolio view with per-holding breakdowns and total PnL."""
+
     total_market_value: float = 0
     total_cost_basis: float = 0
     total_unrealized_pnl: float = 0
@@ -206,17 +383,29 @@ class PortfolioSummary(BaseModel):
 
 
 class AllocationSuggestion(BaseModel):
-    method: str
+    """Suggested portfolio allocation from the optimizer."""
+
+    method: str = Field(
+        description="Strategy name, e.g., 'equal_weight' or 'risk_parity'"
+    )
     weights: dict[str, float] = Field(default_factory=dict)
     explanation: str = ""
 
 
 class RebalanceTrade(BaseModel):
+    """A single rebalance trade needed to reach target allocation."""
+
     symbol: str
     action: str
     quantity: Optional[float] = None
     price: Optional[float] = None
     current_weight: float = 0
     target_weight: float = 0
-    trade_value: float = 0
+    trade_value: float = Field(
+        default=0, description="Signed value of the trade in local currency"
+    )
     note: Optional[str] = None
+
+
+# Resolve forward references for StockReport
+StockReport.model_rebuild()
