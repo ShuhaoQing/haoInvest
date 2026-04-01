@@ -225,3 +225,13 @@ class TestAnalyzeTechnical:
         result = analyze_technical(db, "TEST", MarketType.A_SHARE, verbose=True)
         assert result.moving_averages.explanation is not None
         assert result.rsi.explanation is not None
+
+    def test_math_helpers_not_in_technical_namespace(self):
+        """Math helpers should live in math_utils, not technical."""
+        import haoinvest.analysis.technical as t
+
+        assert not hasattr(t, "_sma")
+        assert not hasattr(t, "_ema")
+        assert not hasattr(t, "_compute_macd")
+        assert not hasattr(t, "_compute_rsi")
+        assert not hasattr(t, "_compute_bollinger")
