@@ -27,7 +27,7 @@ def aggregate_signals(
     Volume anomaly amplifies trend description but does not vote.
     Confidence: 4 agree = 高, 3 = 中, else 低.
     """
-    mt_str = market_type.value if isinstance(market_type, MarketType) else market_type
+    mt_str = market_type.value
 
     tech = analyze_technical(db, symbol, market_type, start_date, end_date)
     vol = analyze_volume(db, symbol, market_type, start_date, end_date)

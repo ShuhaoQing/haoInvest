@@ -5,14 +5,14 @@ from datetime import date, timedelta
 
 import pytest
 
-from haoinvest.analysis.technical import (
-    _compute_bollinger,
-    _compute_macd,
-    _compute_rsi,
-    _ema,
-    _sma,
-    analyze_technical,
+from haoinvest.analysis.math_utils import (
+    compute_bollinger,
+    compute_macd,
+    compute_rsi,
+    ema,
+    sma,
 )
+from haoinvest.analysis.technical import analyze_technical
 from haoinvest.db import Database
 from haoinvest.models import MarketType, PriceBar
 
@@ -63,38 +63,38 @@ def _seed_downtrend(
 
 class TestSMA:
     def test_correct_value(self):
-        assert _sma([1, 2, 3, 4, 5], 5) == 3.0
+        assert sma([1, 2, 3, 4, 5], 5) == 3.0
 
     def test_subset(self):
-        result = _sma([10, 20, 30, 40, 50], 3)
+        result = sma([10, 20, 30, 40, 50], 3)
         assert result == pytest.approx(40.0)  # avg of [30, 40, 50]
 
     def test_insufficient_data(self):
-        assert _sma([1, 2], 5) is None
+        assert sma([1, 2], 5) is None
 
     def test_single_period(self):
-        assert _sma([42.0], 1) == 42.0
+        assert sma([42.0], 1) == 42.0
 
 
 class TestEMA:
     def test_constant_values(self):
         """EMA of constant values should equal that constant."""
-        result = _ema([50.0] * 20, 10)
+        result = ema([50.0] * 20, 10)
         assert result == pytest.approx(50.0)
 
     def test_weights_recent_more(self):
         """EMA should be closer to recent values than SMA when trend accelerates."""
         # Exponentially growing values — recent values much larger
         values = [1.05**i for i in range(40)]
-        ema_val = _ema(values, 10)
-        sma_val = _sma(values, 10)
+        ema_val = ema(values, 10)
+        sma_val = sma(values, 10)
         assert ema_val is not None
         assert sma_val is not None
         # EMA should be higher than SMA in an accelerating uptrend
         assert ema_val > sma_val
 
     def test_insufficient_data(self):
-        assert _ema([1, 2, 3], 10) is None
+        assert ema([1, 2, 3], 10) is None
 
 
 class TestMACD:
@@ -102,20 +102,20 @@ class TestMACD:
         """In a steady uptrend, MACD line should be positive."""
         # Generate 60 prices with upward trend
         closes = [100.0 * (1.005**i) for i in range(60)]
-        macd_line, signal_line, histogram = _compute_macd(closes)
+        macd_line, signal_line, histogram = compute_macd(closes)
         assert macd_line is not None
         assert macd_line > 0
 
     def test_downtrend_negative_macd(self):
         """In a steady downtrend, MACD line should be negative."""
         closes = [200.0 * (0.995**i) for i in range(60)]
-        macd_line, _, _ = _compute_macd(closes)
+        macd_line, _, _ = compute_macd(closes)
         assert macd_line is not None
         assert macd_line < 0
 
     def test_insufficient_data(self):
         closes = [100.0] * 20
-        macd_line, signal_line, histogram = _compute_macd(closes)
+        macd_line, signal_line, histogram = compute_macd(closes)
         assert macd_line is None
         assert signal_line is None
         assert histogram is None
@@ -123,7 +123,7 @@ class TestMACD:
     def test_signal_line_computed(self):
         """With enough data, signal line should be present."""
         closes = [100.0 * (1.003**i) for i in range(60)]
-        _, signal_line, histogram = _compute_macd(closes)
+        _, signal_line, histogram = compute_macd(closes)
         assert signal_line is not None
         assert histogram is not None
 
@@ -132,31 +132,31 @@ class TestRSI:
     def test_strong_uptrend_high_rsi(self):
         """Strong uptrend should have RSI > 50."""
         closes = [100.0 * (1.02**i) for i in range(30)]
-        rsi = _compute_rsi(closes)
+        rsi = compute_rsi(closes)
         assert rsi is not None
         assert rsi > 50
 
     def test_strong_downtrend_low_rsi(self):
         """Strong downtrend should have RSI < 50."""
         closes = [200.0 * (0.98**i) for i in range(30)]
-        rsi = _compute_rsi(closes)
+        rsi = compute_rsi(closes)
         assert rsi is not None
         assert rsi < 50
 
     def test_range(self):
         """RSI should always be between 0 and 100."""
         closes = [100.0 + math.sin(i * 0.3) * 20 for i in range(50)]
-        rsi = _compute_rsi(closes)
+        rsi = compute_rsi(closes)
         assert rsi is not None
         assert 0 <= rsi <= 100
 
     def test_insufficient_data(self):
-        assert _compute_rsi([100, 101, 102], 14) is None
+        assert compute_rsi([100, 101, 102], 14) is None
 
     def test_all_gains(self):
         """All gains should give RSI = 100."""
         closes = [100.0 + i for i in range(20)]
-        rsi = _compute_rsi(closes)
+        rsi = compute_rsi(closes)
         assert rsi == pytest.approx(100.0)
 
 
@@ -164,18 +164,18 @@ class TestBollinger:
     def test_symmetry(self):
         """Upper and lower bands equidistant from middle."""
         closes = [100.0 + math.sin(i * 0.5) * 5 for i in range(30)]
-        upper, middle, lower = _compute_bollinger(closes)
+        upper, middle, lower = compute_bollinger(closes)
         assert upper is not None and middle is not None and lower is not None
         assert pytest.approx(upper - middle, abs=1e-10) == middle - lower
 
     def test_constant_prices(self):
         """Constant prices should give zero bandwidth (bands collapse to middle)."""
         closes = [50.0] * 25
-        upper, middle, lower = _compute_bollinger(closes)
+        upper, middle, lower = compute_bollinger(closes)
         assert upper == middle == lower == 50.0
 
     def test_insufficient_data(self):
-        upper, middle, lower = _compute_bollinger([100.0] * 10, period=20)
+        upper, middle, lower = compute_bollinger([100.0] * 10, period=20)
         assert upper is None
         assert middle is None
         assert lower is None
@@ -225,3 +225,13 @@ class TestAnalyzeTechnical:
         result = analyze_technical(db, "TEST", MarketType.A_SHARE, verbose=True)
         assert result.moving_averages.explanation is not None
         assert result.rsi.explanation is not None
+
+    def test_math_helpers_not_in_technical_namespace(self):
+        """Math helpers should live in math_utils, not technical."""
+        import haoinvest.analysis.technical as t
+
+        assert not hasattr(t, "_sma")
+        assert not hasattr(t, "_ema")
+        assert not hasattr(t, "_compute_macd")
+        assert not hasattr(t, "_compute_rsi")
+        assert not hasattr(t, "_compute_bollinger")

@@ -1,6 +1,5 @@
 """Technical indicators: MA, EMA, MACD, RSI, Bollinger Bands."""
 
-import math
 from datetime import date
 
 from ..db import Database
@@ -12,118 +11,7 @@ from ..models import (
     RSIResult,
     TechnicalIndicators,
 )
-
-
-# ---------------------------------------------------------------------------
-# Pure math helpers (no DB dependency)
-# ---------------------------------------------------------------------------
-
-
-def _sma(values: list[float], period: int) -> float | None:
-    """Simple moving average of the last *period* values."""
-    if len(values) < period:
-        return None
-    return sum(values[-period:]) / period
-
-
-def _ema(values: list[float], period: int) -> float | None:
-    """Exponential moving average. Seeds with SMA then applies alpha smoothing."""
-    if len(values) < period:
-        return None
-    alpha = 2.0 / (period + 1)
-    # Seed with SMA of first `period` values
-    ema_val = sum(values[:period]) / period
-    for v in values[period:]:
-        ema_val = alpha * v + (1 - alpha) * ema_val
-    return ema_val
-
-
-def _ema_series(values: list[float], period: int) -> list[float]:
-    """Full EMA series (used internally by MACD to compute signal line)."""
-    if len(values) < period:
-        return []
-    alpha = 2.0 / (period + 1)
-    result: list[float] = []
-    ema_val = sum(values[:period]) / period
-    result.append(ema_val)
-    for v in values[period:]:
-        ema_val = alpha * v + (1 - alpha) * ema_val
-        result.append(ema_val)
-    return result
-
-
-def _compute_macd(
-    closes: list[float],
-) -> tuple[float | None, float | None, float | None]:
-    """MACD = EMA(12) - EMA(26), signal = EMA(9) of MACD line."""
-    if len(closes) < 26:
-        return None, None, None
-
-    ema12_series = _ema_series(closes, 12)
-    ema26_series = _ema_series(closes, 26)
-
-    # Align: ema12 starts at index 12, ema26 at index 26
-    # We need the overlap portion
-    offset = 26 - 12  # = 14
-    macd_series = [
-        ema12_series[offset + i] - ema26_series[i] for i in range(len(ema26_series))
-    ]
-
-    if len(macd_series) < 9:
-        # Not enough for signal line, but can return MACD
-        macd_line = macd_series[-1] if macd_series else None
-        return macd_line, None, None
-
-    signal_series = _ema_series(macd_series, 9)
-    macd_line = macd_series[-1]
-    signal_line = signal_series[-1]
-    histogram = macd_line - signal_line
-    return macd_line, signal_line, histogram
-
-
-def _compute_rsi(closes: list[float], period: int = 14) -> float | None:
-    """RSI = 100 - 100 / (1 + avg_gain / avg_loss). Uses smoothed averages."""
-    if len(closes) < period + 1:
-        return None
-
-    changes = [closes[i] - closes[i - 1] for i in range(1, len(closes))]
-    gains = [max(c, 0) for c in changes]
-    losses = [max(-c, 0) for c in changes]
-
-    # Initial averages (SMA)
-    avg_gain = sum(gains[:period]) / period
-    avg_loss = sum(losses[:period]) / period
-
-    # Smoothed averages
-    for i in range(period, len(gains)):
-        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
-
-    if avg_loss < 1e-10:
-        return 100.0
-    rs = avg_gain / avg_loss
-    return 100.0 - 100.0 / (1.0 + rs)
-
-
-def _compute_bollinger(
-    closes: list[float], period: int = 20, num_std: float = 2.0
-) -> tuple[float | None, float | None, float | None]:
-    """Returns (upper, middle, lower). Middle = SMA, bands = ±num_std * std."""
-    if len(closes) < period:
-        return None, None, None
-
-    window = closes[-period:]
-    middle = sum(window) / period
-    variance = sum((x - middle) ** 2 for x in window) / period
-    std = math.sqrt(variance)
-    upper = middle + num_std * std
-    lower = middle - num_std * std
-    return upper, middle, lower
-
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+from .math_utils import compute_bollinger, compute_macd, compute_rsi, ema, sma
 
 
 def analyze_technical(
@@ -142,7 +30,7 @@ def analyze_technical(
     bars = db.get_prices(symbol, market_type, start_date, end_date)
     closes = [b.close for b in bars if b.close is not None]
 
-    mt_str = market_type.value if isinstance(market_type, MarketType) else market_type
+    mt_str = market_type.value
 
     if len(closes) < 14:
         return TechnicalIndicators(
@@ -155,12 +43,12 @@ def analyze_technical(
     latest_date = bars[-1].trade_date if bars else None
 
     # --- Moving Averages ---
-    sma_5 = _sma(closes, 5)
-    sma_10 = _sma(closes, 10)
-    sma_20 = _sma(closes, 20)
-    sma_60 = _sma(closes, 60)
-    ema_12 = _ema(closes, 12)
-    ema_26 = _ema(closes, 26)
+    sma_5 = sma(closes, 5)
+    sma_10 = sma(closes, 10)
+    sma_20 = sma(closes, 20)
+    sma_60 = sma(closes, 60)
+    ema_12 = ema(closes, 12)
+    ema_26 = ema(closes, 26)
 
     # Trend assessment based on MA alignment
     above_count = sum(
@@ -198,7 +86,11 @@ def analyze_technical(
     )
 
     # --- MACD ---
-    macd_line, signal_line, histogram = _compute_macd(closes)
+    macd_line, signal_line, histogram = compute_macd(closes)
+    # Signal detection uses histogram sign (MACD line above/below signal line) as a
+    # proxy for momentum direction. This differs from the traditional crossover event
+    # (the moment MACD crosses the signal line). Histogram sign is simpler and works
+    # well for trend confirmation; it does not pinpoint the exact crossover bar.
     if histogram is not None:
         if histogram > 0:
             macd_signal = "金叉"
@@ -225,7 +117,7 @@ def analyze_technical(
     )
 
     # --- RSI ---
-    rsi_val = _compute_rsi(closes)
+    rsi_val = compute_rsi(closes)
     if rsi_val is not None:
         if rsi_val > 70:
             rsi_assessment = "超买"
@@ -255,13 +147,15 @@ def analyze_technical(
     )
 
     # --- Bollinger Bands ---
-    bb_upper, bb_middle, bb_lower = _compute_bollinger(closes)
+    bb_upper, bb_middle, bb_lower = compute_bollinger(closes)
     if bb_upper is not None and bb_lower is not None and bb_middle is not None:
         bandwidth_pct = (bb_upper - bb_lower) / bb_middle * 100
-        # Position relative to bands
         band_range = bb_upper - bb_lower
         if band_range > 0:
             relative_pos = (latest_close - bb_lower) / band_range
+            # Thresholds 0.8/0.2 define "near upper/lower band" as the top/bottom 20%
+            # of band width. This is a custom calibration: tight enough to signal
+            # genuine proximity to the band without triggering on minor midline drift.
             if relative_pos > 0.8:
                 bb_position = "上轨附近"
             elif relative_pos < 0.2:
