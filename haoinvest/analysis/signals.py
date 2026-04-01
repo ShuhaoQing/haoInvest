@@ -32,6 +32,9 @@ def aggregate_signals(
     tech = analyze_technical(db, symbol, market_type, start_date, end_date)
     vol = analyze_volume(db, symbol, market_type, start_date, end_date)
 
+    # If tech has a message (insufficient data or partial-data warning), skip all voting.
+    # Even with partial data (14–25 days), where RSI/MA are available, we bail out
+    # rather than vote on a subset — a partial vote could mislead users about signal strength.
     if tech.message:
         return SignalSummary(
             symbol=symbol,
