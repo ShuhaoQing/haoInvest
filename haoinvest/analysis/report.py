@@ -6,6 +6,9 @@ from ..db import Database
 from ..models import MarketType, StockReport
 from .fundamental import analyze_stock
 from .risk import calculate_risk_metrics
+from .signals import aggregate_signals
+from .technical import analyze_technical
+from .volume import analyze_volume
 
 
 def full_stock_report(
@@ -14,14 +17,17 @@ def full_stock_report(
     market_type: MarketType,
     price_start: date | None = None,
     price_end: date | None = None,
+    include_technical: bool = False,
 ) -> StockReport:
     """Generate a comprehensive analysis report for a single stock.
 
     Combines fundamental analysis with risk metrics from price history.
+    When include_technical=True, also adds technical indicators, volume
+    analysis, and aggregated signals.
     Results are cached in the database.
     """
-    # Check cache first
-    cached = db.get_cached_analysis(symbol, "full_report")
+    cache_key = "full_report_tech" if include_technical else "full_report"
+    cached = db.get_cached_analysis(symbol, cache_key)
     if cached:
         return StockReport.model_validate(cached)
 
@@ -42,7 +48,16 @@ def full_stock_report(
         risk_metrics=risk,
     )
 
+    if include_technical:
+        report.technical = analyze_technical(
+            db, symbol, market_type, price_start, price_end
+        )
+        report.volume = analyze_volume(db, symbol, market_type, price_start, price_end)
+        report.signals = aggregate_signals(
+            db, symbol, market_type, price_start, price_end
+        )
+
     # Cache the result
-    db.save_analysis(symbol, "full_report", report.model_dump())
+    db.save_analysis(symbol, cache_key, report.model_dump())
 
     return report

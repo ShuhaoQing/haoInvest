@@ -215,6 +215,9 @@ class StockReport(BaseModel):
     total_market_cap: Optional[int] = None
     valuation: ValuationAssessment = Field(default_factory=ValuationAssessment)
     risk_metrics: RiskMetrics = Field(default_factory=RiskMetrics)
+    technical: Optional["TechnicalIndicators"] = None
+    volume: Optional["VolumeAnalysis"] = None
+    signals: Optional["SignalSummary"] = None
 
 
 # --- Technical analysis models ---
@@ -402,3 +405,7 @@ class RebalanceTrade(BaseModel):
         default=0, description="Signed value of the trade in local currency"
     )
     note: Optional[str] = None
+
+
+# Resolve forward references for StockReport
+StockReport.model_rebuild()

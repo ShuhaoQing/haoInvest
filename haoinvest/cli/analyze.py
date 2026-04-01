@@ -7,12 +7,15 @@ import typer
 
 from ..analysis.fundamental import analyze_stock
 from ..analysis.risk import calculate_risk_metrics, portfolio_correlation
+from ..analysis.signals import aggregate_signals
+from ..analysis.technical import analyze_technical
+from ..analysis.volume import analyze_volume
 from ..db import Database
 from ..models import MarketType
 from .formatters import error_output, json_output, kv_output
 from .market import _detect_market_type
 
-app = typer.Typer(help="Analysis — fundamental, risk, correlation.")
+app = typer.Typer(help="Analysis — fundamental, risk, technical, volume, signals.")
 
 
 def _init_db() -> Database:
@@ -158,3 +161,176 @@ def correlation(
         for s in syms:
             row = "\t".join(str(matrix[s].get(s2, "")) for s2 in syms)
             print(f"{s}\t{row}")
+
+
+@app.command()
+def technical(
+    symbol: str = typer.Argument(help="Stock/crypto symbol"),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
+    start: Optional[str] = typer.Option(
+        None, "--start", help="Start date YYYY-MM-DD (default: 1 year ago)"
+    ),
+    end: Optional[str] = typer.Option(
+        None, "--end", help="End date YYYY-MM-DD (default: today)"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Add Chinese explanations for learning"
+    ),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Technical indicators — MA, MACD, RSI, Bollinger Bands."""
+    db = _init_db()
+    mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
+    end_date = date.fromisoformat(end) if end else date.today()
+    start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
+
+    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+    result = analyze_technical(db, symbol, mt, start_date, end_date, verbose=verbose)
+
+    if use_json:
+        json_output(result)
+    else:
+        output = {"symbol": result.symbol, "date": str(result.latest_date)}
+        if result.message:
+            output["message"] = result.message
+        else:
+            ma = result.moving_averages
+            output.update(
+                {
+                    "close": result.latest_close,
+                    "SMA5": ma.sma_5,
+                    "SMA10": ma.sma_10,
+                    "SMA20": ma.sma_20,
+                    "SMA60": ma.sma_60,
+                    "EMA12": ma.ema_12,
+                    "EMA26": ma.ema_26,
+                    "MA_Trend": ma.trend,
+                }
+            )
+            if verbose and ma.explanation:
+                output["MA_Explain"] = ma.explanation
+            output.update(
+                {
+                    "MACD": result.macd.macd_line,
+                    "Signal": result.macd.signal_line,
+                    "Histogram": result.macd.histogram,
+                    "MACD_Signal": result.macd.signal,
+                }
+            )
+            if verbose and result.macd.explanation:
+                output["MACD_Explain"] = result.macd.explanation
+            output.update(
+                {
+                    "RSI": result.rsi.rsi,
+                    "RSI_Assessment": result.rsi.assessment,
+                }
+            )
+            if verbose and result.rsi.explanation:
+                output["RSI_Explain"] = result.rsi.explanation
+            bb = result.bollinger
+            output.update(
+                {
+                    "BB_Upper": bb.upper,
+                    "BB_Middle": bb.middle,
+                    "BB_Lower": bb.lower,
+                    "BB_Bandwidth%": bb.bandwidth_pct,
+                    "BB_Position": bb.position,
+                }
+            )
+            if verbose and bb.explanation:
+                output["BB_Explain"] = bb.explanation
+        kv_output(output)
+
+
+@app.command()
+def volume(
+    symbol: str = typer.Argument(help="Stock/crypto symbol"),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
+    start: Optional[str] = typer.Option(
+        None, "--start", help="Start date YYYY-MM-DD (default: 1 year ago)"
+    ),
+    end: Optional[str] = typer.Option(
+        None, "--end", help="End date YYYY-MM-DD (default: today)"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Add Chinese explanations for learning"
+    ),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Volume analysis — anomaly detection, turnover ratio."""
+    db = _init_db()
+    mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
+    end_date = date.fromisoformat(end) if end else date.today()
+    start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
+
+    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+    result = analyze_volume(db, symbol, mt, start_date, end_date, verbose=verbose)
+
+    if use_json:
+        json_output(result)
+    else:
+        output = {"symbol": result.symbol}
+        if result.message:
+            output["message"] = result.message
+        else:
+            output.update(
+                {
+                    "latest_volume": result.latest_volume,
+                    "avg_volume_20d": result.avg_volume_20d,
+                    "volume_ratio": result.volume_ratio,
+                    "is_anomaly": result.is_anomaly,
+                    "assessment": result.assessment,
+                }
+            )
+            if verbose and result.explanation:
+                output["explanation"] = result.explanation
+        kv_output(output)
+
+
+@app.command()
+def signals(
+    symbol: str = typer.Argument(help="Stock/crypto symbol"),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
+    start: Optional[str] = typer.Option(
+        None, "--start", help="Start date YYYY-MM-DD (default: 1 year ago)"
+    ),
+    end: Optional[str] = typer.Option(
+        None, "--end", help="End date YYYY-MM-DD (default: today)"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Add Chinese explanations for learning"
+    ),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Signal summary — aggregated technical view."""
+    db = _init_db()
+    mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
+    end_date = date.fromisoformat(end) if end else date.today()
+    start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
+
+    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+    result = aggregate_signals(db, symbol, mt, start_date, end_date, verbose=verbose)
+
+    if use_json:
+        json_output(result)
+    else:
+        output = {
+            "symbol": result.symbol,
+            "overall_signal": result.overall_signal,
+            "confidence": result.confidence,
+            "bullish": result.bullish_count,
+            "bearish": result.bearish_count,
+            "neutral": result.neutral_count,
+        }
+        for i, detail in enumerate(result.details):
+            output[f"indicator_{i + 1}"] = detail
+        if verbose and result.explanation:
+            print(result.explanation)
+            return
+        kv_output(output)
