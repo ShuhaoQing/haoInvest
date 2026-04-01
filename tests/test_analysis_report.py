@@ -3,8 +3,6 @@
 from datetime import date
 from unittest.mock import patch
 
-import pytest
-
 from haoinvest.analysis.report import full_stock_report
 from haoinvest.db import Database
 from haoinvest.models import (
