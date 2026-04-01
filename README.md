@@ -125,6 +125,17 @@ pytest tests/test_fx.py          # Single module
 └─────────────────────────────────────┘
 ```
 
+## Known Issues / Backlog
+
+Issues identified in code review, deferred for future PRs:
+
+- **[test]** `test_analysis_technical.py` imports private functions (`_sma`, `_ema`, `_compute_macd`, etc.) directly — brittle test contract. Extract to `analysis/math_utils.py` or make public when refactoring.
+- **[bug]** Analysis cache key in `report.py` does not include `price_start`/`price_end` — same symbol with different date ranges will hit the same cache entry. Needs a cache key scheme that incorporates date range.
+- **[cleanup]** Defensive `isinstance(market_type, MarketType)` check in `technical.py`, `volume.py`, `signals.py` is redundant — type signatures already enforce `MarketType`. Remove and let type errors surface naturally.
+- **[ux]** `analyze_technical` returns `message=None` when data is 14–25 days (enough for RSI but not Bollinger/MACD) — add a warning so users know some indicators are unavailable.
+- **[docs]** Bollinger Bands position thresholds (0.8/0.2) are a custom choice, not industry standard — add a comment explaining the rationale.
+- **[docs]** MACD golden/death cross detection uses histogram sign (simplified) rather than the traditional crossover event — add a note in verbose explanation or code comment.
+
 ## License
 
 [MIT](LICENSE)

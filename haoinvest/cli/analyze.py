@@ -330,7 +330,6 @@ def signals(
         }
         for i, detail in enumerate(result.details):
             output[f"indicator_{i + 1}"] = detail
+        kv_output(output)
         if verbose and result.explanation:
             print(result.explanation)
-            return
-        kv_output(output)
