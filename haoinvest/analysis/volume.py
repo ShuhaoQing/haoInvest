@@ -20,7 +20,7 @@ def analyze_volume(
     Volume ratio < 0.5 flags as 缩量.
     """
     bars = db.get_prices(symbol, market_type, start_date, end_date)
-    mt_str = market_type.value if isinstance(market_type, MarketType) else market_type
+    mt_str = market_type.value
 
     volumes = [b.volume for b in bars if b.volume is not None and b.volume > 0]
 
