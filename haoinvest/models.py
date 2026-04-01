@@ -217,6 +217,112 @@ class StockReport(BaseModel):
     risk_metrics: RiskMetrics = Field(default_factory=RiskMetrics)
 
 
+# --- Technical analysis models ---
+
+
+class MovingAverages(BaseModel):
+    """Moving average values at the most recent data point."""
+
+    sma_5: Optional[float] = None
+    sma_10: Optional[float] = None
+    sma_20: Optional[float] = None
+    sma_60: Optional[float] = None
+    ema_12: Optional[float] = None
+    ema_26: Optional[float] = None
+    trend: str = Field(
+        default="无法判断", description="Trend assessment: 上升趋势/下降趋势/震荡"
+    )
+    explanation: Optional[str] = Field(
+        default=None, description="Chinese explanation of trend logic (verbose mode)"
+    )
+
+
+class MACDResult(BaseModel):
+    """MACD indicator values at the most recent data point."""
+
+    macd_line: Optional[float] = None
+    signal_line: Optional[float] = None
+    histogram: Optional[float] = Field(
+        default=None, description="MACD - signal; positive = bullish momentum"
+    )
+    signal: str = Field(default="无信号", description="金叉/死叉/无信号")
+    explanation: Optional[str] = None
+
+
+class RSIResult(BaseModel):
+    """Relative Strength Index over the configured period."""
+
+    rsi: Optional[float] = None
+    period: int = 14
+    assessment: str = Field(default="无法判断", description="超买/超卖/中性")
+    explanation: Optional[str] = None
+
+
+class BollingerBands(BaseModel):
+    """Bollinger Bands at the most recent data point."""
+
+    upper: Optional[float] = None
+    middle: Optional[float] = None
+    lower: Optional[float] = None
+    bandwidth_pct: Optional[float] = Field(
+        default=None, description="(upper - lower) / middle * 100"
+    )
+    position: str = Field(
+        default="无法判断", description="价格位于上轨附近/中轨附近/下轨附近"
+    )
+    explanation: Optional[str] = None
+
+
+class TechnicalIndicators(BaseModel):
+    """Aggregated technical indicator results for a single stock."""
+
+    symbol: str
+    market_type: str
+    latest_close: Optional[float] = None
+    latest_date: Optional[date] = None
+    moving_averages: MovingAverages = Field(default_factory=MovingAverages)
+    macd: MACDResult = Field(default_factory=MACDResult)
+    rsi: RSIResult = Field(default_factory=RSIResult)
+    bollinger: BollingerBands = Field(default_factory=BollingerBands)
+    message: Optional[str] = Field(
+        default=None, description="Warning if insufficient data"
+    )
+
+
+class VolumeAnalysis(BaseModel):
+    """Volume anomaly and turnover analysis."""
+
+    symbol: str
+    market_type: str
+    latest_volume: Optional[float] = None
+    avg_volume_20d: Optional[float] = None
+    volume_ratio: Optional[float] = Field(
+        default=None, description="latest_volume / avg_volume_20d"
+    )
+    is_anomaly: bool = Field(default=False, description="True if volume_ratio > 2.0")
+    assessment: str = Field(default="正常", description="放量/缩量/正常")
+    explanation: Optional[str] = None
+    message: Optional[str] = None
+
+
+class SignalSummary(BaseModel):
+    """Aggregated signal from all technical indicators via vote counting."""
+
+    symbol: str
+    market_type: str
+    overall_signal: str = Field(default="中性", description="偏多/偏空/中性")
+    confidence: str = Field(
+        default="低", description="高/中/低 based on indicator agreement"
+    )
+    bullish_count: int = 0
+    bearish_count: int = 0
+    neutral_count: int = 0
+    details: list[str] = Field(
+        default_factory=list, description="Per-indicator signal descriptions"
+    )
+    explanation: Optional[str] = None
+
+
 # --- Portfolio models ---
 
 
