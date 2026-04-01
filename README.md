@@ -125,12 +125,6 @@ pytest tests/test_fx.py          # Single module
 └─────────────────────────────────────┘
 ```
 
-## Known Issues / Backlog
-
-Issues identified in code review, deferred for future PRs:
-
-- **[ux]** `analyze_technical` returns `message=None` when data is 14–25 days (enough for RSI but not Bollinger/MACD) — add a warning so users know some indicators are unavailable.
-
 ## License
 
 [MIT](LICENSE)
