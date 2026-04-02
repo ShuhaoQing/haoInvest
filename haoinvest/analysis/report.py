@@ -66,6 +66,7 @@ def full_stock_report(
         operating_margin=fundamental.operating_margin,
         current_ratio=fundamental.current_ratio,
         free_cash_flow=fundamental.free_cash_flow,
+        operating_cash_flow=fundamental.operating_cash_flow,
         peg_ratio=fundamental.peg_ratio,
         financial_health=fundamental.financial_health,
     )
@@ -198,9 +199,10 @@ def _score_profitability(roe: float | None, profit_margin: float | None) -> int:
 
 
 def _score_growth(revenue_growth: float | None) -> int:
+    """Score growth (revenue_growth is percentage, e.g. 15.0 = 15%)."""
     if revenue_growth is None:
         return 3
-    g = revenue_growth * 100 if abs(revenue_growth) < 5 else revenue_growth
+    g = revenue_growth
     if g > 20:
         return 5
     elif g > 10:

@@ -304,6 +304,7 @@ class StockReport(BaseModel):
     operating_margin: Optional[float] = None
     current_ratio: Optional[float] = None
     free_cash_flow: Optional[float] = None
+    operating_cash_flow: Optional[float] = None
     peg_ratio: Optional[float] = None
     financial_health: Optional[FinancialHealthAssessment] = None
     checklist: Optional[BuyReadinessChecklist] = None

@@ -144,6 +144,49 @@ class TestMarketHistory:
             assert "(empty)" in result.output
 
 
+class TestMarketQuoteBatch:
+    """Unit tests for batch 'haoinvest market quote A,B'."""
+
+    def test_quote_batch_two_symbols(self):
+        mock_provider = MagicMock()
+        mock_provider.get_current_price.side_effect = [1800.0, 12.5]
+        mock_provider.get_basic_info.side_effect = [
+            BasicInfo(
+                name="贵州茅台",
+                currency="CNY",
+                sector="白酒",
+                pe_ratio=35.2,
+                pb_ratio=12.1,
+                total_market_cap=2100000000000,
+            ),
+            BasicInfo(
+                name="平安银行",
+                currency="CNY",
+                sector="银行",
+                pe_ratio=5.3,
+                pb_ratio=0.6,
+                total_market_cap=240000000000,
+            ),
+        ]
+        with patch("haoinvest.cli.market.get_provider", return_value=mock_provider):
+            result = runner.invoke(app, ["market", "quote", "600519,000001"])
+            assert result.exit_code == 0
+            assert "贵州茅台" in result.output
+            assert "平安银行" in result.output
+
+    def test_quote_batch_one_fails(self):
+        mock_provider = MagicMock()
+        mock_provider.get_current_price.side_effect = [1800.0, ValueError("not found")]
+        mock_provider.get_basic_info.return_value = BasicInfo(
+            name="贵州茅台", currency="CNY", sector="白酒", pe_ratio=35.2
+        )
+        with patch("haoinvest.cli.market.get_provider", return_value=mock_provider):
+            result = runner.invoke(app, ["market", "quote", "600519,999999"])
+            assert result.exit_code == 0
+            assert "贵州茅台" in result.output
+            assert "ERROR" in result.output
+
+
 class TestMarketIntegration:
     """Integration tests — real API calls."""
 

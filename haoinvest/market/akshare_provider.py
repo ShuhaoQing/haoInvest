@@ -183,7 +183,8 @@ class AKShareProvider(MarketProvider):
         try:
             import akshare as ak
 
-            df = ak.stock_financial_analysis_indicator(symbol=symbol)
+            with _bypass_proxy():
+                df = ak.stock_financial_analysis_indicator(symbol=symbol)
             if df.empty:
                 return {}
             # Take the most recent period (first row)

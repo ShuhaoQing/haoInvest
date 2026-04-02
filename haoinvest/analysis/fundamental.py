@@ -192,12 +192,10 @@ def _assess_profitability(roe: float | None, profit_margin: float | None) -> str
 
 
 def _assess_growth(revenue_growth: float | None) -> str:
-    """Assess growth based on YoY revenue growth."""
+    """Assess growth based on YoY revenue growth (percentage, e.g. 15.0 = 15%)."""
     if revenue_growth is None:
         return "N/A"
-    # yfinance returns as ratio (0.15 = 15%), AKShare as percentage
-    # Normalize: if abs < 5, likely a ratio; otherwise percentage
-    g = revenue_growth * 100 if abs(revenue_growth) < 5 else revenue_growth
+    g = revenue_growth
     if g > 20:
         return f"高速增长 ({g:.1f}%)"
     elif g > 10:

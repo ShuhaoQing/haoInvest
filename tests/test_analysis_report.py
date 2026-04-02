@@ -158,10 +158,10 @@ class TestScoreProfitability:
 
 class TestScoreGrowth:
     def test_high(self):
-        assert _score_growth(0.25) == 5
+        assert _score_growth(25.0) == 5
 
     def test_negative(self):
-        assert _score_growth(-0.10) == 2
+        assert _score_growth(-10.0) == 2
 
     def test_none(self):
         assert _score_growth(None) == 3
@@ -192,7 +192,7 @@ class TestComputeChecklist:
             valuation=ValuationAssessment(overall="偏低估"),
             risk_metrics=RiskMetrics(max_drawdown_pct=-8.0, sharpe_ratio=1.5),
             roe=20.0,
-            revenue_growth=0.25,
+            revenue_growth=25.0,
             financial_health=FinancialHealthAssessment(
                 profitability="优秀", growth="高速增长"
             ),
@@ -215,7 +215,7 @@ class TestComputeChecklist:
             valuation=ValuationAssessment(overall="明显高估"),
             risk_metrics=RiskMetrics(max_drawdown_pct=-45.0, sharpe_ratio=-0.5),
             roe=2.0,
-            revenue_growth=-0.20,
+            revenue_growth=-20.0,
             financial_health=FinancialHealthAssessment(
                 profitability="偏弱", growth="负增长"
             ),

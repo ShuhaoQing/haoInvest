@@ -34,20 +34,16 @@ class TestAssessProfitability:
 
 class TestAssessGrowth:
     def test_high_growth(self):
-        assert "高速增长" in _assess_growth(0.25)  # yfinance ratio format
+        assert "高速增长" in _assess_growth(25.0)  # All values now in percentage
 
     def test_stable_growth(self):
-        assert "稳定增长" in _assess_growth(0.15)
+        assert "稳定增长" in _assess_growth(15.0)
 
     def test_low_growth(self):
-        assert "低增长" in _assess_growth(0.05)
+        assert "低增长" in _assess_growth(5.0)
 
     def test_negative_growth(self):
-        assert "负增长" in _assess_growth(-0.10)
-
-    def test_akshare_percentage_format(self):
-        # AKShare returns as percentage directly (e.g. 25.0 for 25%)
-        assert "高速增长" in _assess_growth(25.0)
+        assert "负增长" in _assess_growth(-10.0)
 
     def test_none_returns_na(self):
         assert _assess_growth(None) == "N/A"
@@ -111,7 +107,7 @@ class TestAssessFinancialHealth:
         info = BasicInfo(
             roe=18.0,
             profit_margin=15.0,
-            revenue_growth=0.20,
+            revenue_growth=20.0,
             debt_to_equity=40.0,
             current_ratio=2.0,
             free_cash_flow=1_000_000,
@@ -123,7 +119,7 @@ class TestAssessFinancialHealth:
     def test_weak_stock(self):
         info = BasicInfo(
             roe=2.0,
-            revenue_growth=-0.15,
+            revenue_growth=-15.0,
             debt_to_equity=250.0,
             free_cash_flow=-500_000,
         )
@@ -136,7 +132,7 @@ class TestAssessFinancialHealth:
         assert result.overall == "无法评估"
 
     def test_partial_data(self):
-        info = BasicInfo(roe=12.0, revenue_growth=0.08)
+        info = BasicInfo(roe=12.0, revenue_growth=8.0)
         result = _assess_financial_health(info)
         assert result.profitability != "N/A"
         assert result.growth != "N/A"
