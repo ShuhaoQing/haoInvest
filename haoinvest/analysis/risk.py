@@ -1,9 +1,10 @@
-"""Risk metrics: volatility, max drawdown, Sharpe ratio."""
+"""Risk metrics: volatility, max drawdown, Sharpe ratio, Sortino ratio."""
 
-import math
 from datetime import date
 
 from ..db import Database
+from ..engine.databridge import daily_returns, multi_asset_prices
+from ..engine.risk_engine import compute_correlation_matrix, compute_risk_metrics
 from ..models import MarketType, RiskMetrics
 
 
@@ -27,56 +28,16 @@ def calculate_risk_metrics(
             message="Not enough price data for analysis",
         )
 
-    closes = [b.close for b in bars if b.close is not None]
-    if len(closes) < 2:
+    returns = daily_returns(bars)
+    if len(returns) < 1:
         return RiskMetrics(
             num_days=len(bars),
             message="Not enough close prices for analysis",
         )
 
-    daily_returns = [
-        (closes[i] - closes[i - 1]) / closes[i - 1] for i in range(1, len(closes))
-    ]
-
-    # Annualized volatility (assuming 252 trading days)
-    if len(daily_returns) > 1:
-        mean_return = sum(daily_returns) / len(daily_returns)
-        variance = sum((r - mean_return) ** 2 for r in daily_returns) / (
-            len(daily_returns) - 1
-        )
-        daily_vol = math.sqrt(variance)
-        ann_vol = daily_vol * math.sqrt(252)
-    else:
-        ann_vol = None
-        mean_return = daily_returns[0] if daily_returns else 0
-
-    # Max drawdown
-    peak = closes[0]
-    max_dd = 0.0
-    for price in closes[1:]:
-        if price > peak:
-            peak = price
-        dd = (peak - price) / peak
-        if dd > max_dd:
-            max_dd = dd
-
-    # Total return
-    total_return_pct = (closes[-1] - closes[0]) / closes[0] * 100
-
-    # Sharpe ratio
-    if ann_vol and ann_vol > 0:
-        ann_return = mean_return * 252
-        sharpe = (ann_return - risk_free_rate) / ann_vol
-    else:
-        sharpe = None
-
-    return RiskMetrics(
-        annualized_volatility=round(ann_vol * 100, 2) if ann_vol else None,
-        max_drawdown_pct=round(max_dd * 100, 2),
-        sharpe_ratio=round(sharpe, 2) if sharpe is not None else None,
-        total_return_pct=round(total_return_pct, 2),
-        num_days=len(closes),
-    )
+    result = compute_risk_metrics(returns, risk_free_rate)
+    result.num_days = len(bars)
+    return result
 
 
 def portfolio_correlation(
@@ -88,52 +49,14 @@ def portfolio_correlation(
     """Calculate correlation matrix between assets.
 
     Returns a dict with symbols as keys and correlation values.
-    Simple Pearson correlation on daily returns.
     """
-    returns_by_symbol: dict[str, list[float]] = {}
-
-    for symbol, market_type in symbols:
-        bars = db.get_prices(symbol, market_type, start_date, end_date)
-        closes = [b.close for b in bars if b.close is not None]
-        if len(closes) < 2:
-            continue
-        returns = [
-            (closes[i] - closes[i - 1]) / closes[i - 1] for i in range(1, len(closes))
-        ]
-        returns_by_symbol[symbol] = returns
-
-    if len(returns_by_symbol) < 2:
+    prices_df = multi_asset_prices(db, symbols, start_date, end_date)
+    if prices_df.empty or len(prices_df.columns) < 2:
         return {"message": "Need at least 2 assets with price data", "matrix": {}}
 
-    # Align lengths (use shortest common length)
-    min_len = min(len(r) for r in returns_by_symbol.values())
-    aligned = {s: r[:min_len] for s, r in returns_by_symbol.items()}
+    returns_df = prices_df.pct_change().dropna()
+    if len(returns_df) < 2:
+        return {"message": "Need at least 2 data points for correlation", "matrix": {}}
 
-    syms = list(aligned.keys())
-    matrix: dict[str, dict[str, float]] = {}
-
-    for s1 in syms:
-        matrix[s1] = {}
-        for s2 in syms:
-            matrix[s1][s2] = round(_pearson(aligned[s1], aligned[s2]), 4)
-
+    matrix = compute_correlation_matrix(returns_df)
     return {"matrix": matrix}
-
-
-def _pearson(x: list[float], y: list[float]) -> float:
-    """Calculate Pearson correlation coefficient."""
-    n = len(x)
-    if n == 0:
-        return 0.0
-
-    mean_x = sum(x) / n
-    mean_y = sum(y) / n
-
-    cov = sum((x[i] - mean_x) * (y[i] - mean_y) for i in range(n))
-    std_x = math.sqrt(sum((xi - mean_x) ** 2 for xi in x))
-    std_y = math.sqrt(sum((yi - mean_y) ** 2 for yi in y))
-
-    if std_x == 0 or std_y == 0:
-        return 0.0
-
-    return cov / (std_x * std_y)

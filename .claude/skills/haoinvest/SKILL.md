@@ -41,7 +41,7 @@ uv run haoinvest analyze correlation <sym1,sym2,...>             # Correlation m
 
 ### Strategy
 ```bash
-uv run haoinvest strategy optimize [--method equal_weight|risk_parity|min_volatility] [--symbols <syms>]
+uv run haoinvest strategy optimize [--method equal_weight|risk_parity|min_volatility|max_sharpe] [--symbols <syms>]
 uv run haoinvest strategy rebalance --target '{"600519": 0.5, "BTC_USDT": 0.5}'
 ```
 
@@ -58,8 +58,9 @@ All commands support `--json` flag for structured JSON output.
 
 ## Output Format
 
-- Default: Key-Value text (single records) or TSV (tables)
+- Default: **Key-Value** text (single records) or **TSV** (tables/lists)
 - `--json`: Full JSON output
+- **Prefer TSV (default) over `--json` for list commands** (`portfolio list`, `journal list`, `market history`, `strategy rebalance`). TSV is more compact and easier for LLMs to parse. Use `--json` only when you need nested data or programmatic processing.
 - You (Claude) should interpret the data and respond in **Chinese**, explaining concepts in beginner-friendly terms
 
 ## Crypto Special Handling

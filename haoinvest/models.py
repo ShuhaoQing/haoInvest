@@ -191,6 +191,7 @@ class RiskMetrics(BaseModel):
     annualized_volatility: Optional[float] = None
     max_drawdown_pct: Optional[float] = None
     sharpe_ratio: Optional[float] = None
+    sortino_ratio: Optional[float] = None
     total_return_pct: Optional[float] = None
     num_days: int = Field(
         default=0, description="Number of trading days in the analysis window"

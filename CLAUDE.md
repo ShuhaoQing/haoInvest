@@ -41,10 +41,15 @@ haoinvest/
 │   ├── market.py      # market subcommand
 │   ├── portfolio.py   # portfolio subcommand
 │   └── strategy.py    # strategy subcommand
+├── engine/            # Computation engine — pandas-ta, QuantStats, PyPortfolioOpt
+│   ├── databridge.py  # PriceBar ↔ pandas conversion, safe_float
+│   ├── technical_engine.py  # Technical indicators (MA, MACD, RSI, BB)
+│   ├── risk_engine.py       # Risk metrics (vol, drawdown, Sharpe, Sortino)
+│   └── optimization_engine.py # Portfolio optimization (HRP, min vol, max Sharpe)
 ├── portfolio/         # Trade recording, position tracking, returns (TWR)
-├── analysis/          # Fundamental (PE/PB/ROE), risk (volatility, Sharpe, drawdown)
+├── analysis/          # Thin adapters over engine — fundamental, risk, technical
 ├── market/            # Provider registry — akshare, yfinance, crypto MCP
-└── strategy/          # Optimizer (equal weight, risk parity, min vol), rebalance
+└── strategy/          # Optimizer adapter + rebalance logic
 ```
 
 ## CI
