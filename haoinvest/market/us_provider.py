@@ -57,9 +57,29 @@ class USProvider(MarketProvider):
         return BasicInfo(
             name=info.get("shortName") or info.get("longName", ""),
             sector=info.get("sector", ""),
+            industry=info.get("industry", ""),
             currency=info.get("currency", "USD"),
             market_type="us",
             market_cap=info.get("marketCap"),
             pe_ratio=info.get("trailingPE"),
             pb_ratio=info.get("priceToBook"),
+            # yfinance returns ratios (0.15 = 15%); convert to percentage
+            roe=_ratio_to_pct(info.get("returnOnEquity")),
+            roa=_ratio_to_pct(info.get("returnOnAssets")),
+            debt_to_equity=info.get("debtToEquity"),
+            revenue_growth=_ratio_to_pct(info.get("revenueGrowth")),
+            profit_margin=_ratio_to_pct(info.get("profitMargins")),
+            gross_margin=_ratio_to_pct(info.get("grossMargins")),
+            operating_margin=_ratio_to_pct(info.get("operatingMargins")),
+            current_ratio=info.get("currentRatio"),
+            free_cash_flow=info.get("freeCashflow"),
+            operating_cash_flow=info.get("operatingCashflow"),
+            peg_ratio=info.get("trailingPegRatio"),
         )
+
+
+def _ratio_to_pct(value: float | None) -> float | None:
+    """Convert a ratio (0.15) to percentage (15.0). Returns None for None."""
+    if value is None:
+        return None
+    return value * 100

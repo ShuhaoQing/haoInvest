@@ -25,39 +25,79 @@ def _detect_market_type(symbol: str) -> MarketType:
 @app.command()
 def quote(
     symbol: str = typer.Argument(
-        help="Stock/crypto symbol, e.g. 600519, BTC_USDT, AAPL"
+        help="Stock/crypto symbol(s), comma-separated for batch, e.g. 600519,000858"
     ),
     market_type: Optional[str] = typer.Option(
         None, "--market-type", "-m", help="Override: a_share, crypto, us"
     ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
-    """Get current price and basic info for a symbol."""
-    mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
-    try:
-        provider = get_provider(mt)
-        price = provider.get_current_price(symbol)
-        info = provider.get_basic_info(symbol)
-    except (ValueError, RuntimeError) as e:
-        error_output(str(e))
-        raise typer.Exit(1)
+    """Get current price and basic info for symbol(s)."""
+    symbol_list = [s.strip() for s in symbol.split(",")]
 
-    result = {
-        "Symbol": symbol,
-        "Name": info.name,
-        "Price": price,
-        "Currency": info.currency,
-        "Sector": info.sector,
-        "PE(TTM)": info.pe_ratio,
-        "PB": info.pb_ratio,
-        "MarketCap": info.total_market_cap,
-        "MarketType": mt.value,
-    }
+    if len(symbol_list) == 1:
+        # Single symbol — kv_output (original behavior)
+        mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
+        try:
+            provider = get_provider(mt)
+            price = provider.get_current_price(symbol)
+            info = provider.get_basic_info(symbol)
+        except (ValueError, RuntimeError) as e:
+            error_output(str(e))
+            raise typer.Exit(1)
 
-    if use_json:
-        json_output(result)
+        result = {
+            "Symbol": symbol,
+            "Name": info.name,
+            "Price": price,
+            "Currency": info.currency,
+            "Sector": info.sector,
+            "PE(TTM)": info.pe_ratio,
+            "PB": info.pb_ratio,
+            "MarketCap": info.total_market_cap,
+            "MarketType": mt.value,
+        }
+        if use_json:
+            json_output(result)
+        else:
+            kv_output(result)
     else:
-        kv_output(result)
+        # Batch — tsv_output comparison table
+        rows = []
+        for s in symbol_list:
+            mt = MarketType(market_type) if market_type else _detect_market_type(s)
+            try:
+                provider = get_provider(mt)
+                price = provider.get_current_price(s)
+                info = provider.get_basic_info(s)
+                rows.append(
+                    {
+                        "Symbol": s,
+                        "Name": info.name,
+                        "Price": price,
+                        "PE(TTM)": info.pe_ratio,
+                        "PB": info.pb_ratio,
+                        "Sector": info.sector,
+                        "MarketCap": info.total_market_cap,
+                    }
+                )
+            except (ValueError, RuntimeError) as e:
+                rows.append({"Symbol": s, "Name": f"ERROR: {e}"})
+        if use_json:
+            json_output(rows)
+        else:
+            tsv_output(
+                rows,
+                columns=[
+                    "Symbol",
+                    "Name",
+                    "Price",
+                    "PE(TTM)",
+                    "PB",
+                    "Sector",
+                    "MarketCap",
+                ],
+            )
 
 
 @app.command()
@@ -91,4 +131,64 @@ def history(
     else:
         tsv_output(
             bars, columns=["trade_date", "open", "high", "low", "close", "volume"]
+        )
+
+
+@app.command("sector-list")
+def sector_list(
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """行业板块排行 — list all A-share industry sectors with performance."""
+    from ..market.akshare_provider import AKShareProvider
+
+    try:
+        rows = AKShareProvider.get_sector_list()
+    except Exception as e:
+        error_output(str(e))
+        raise typer.Exit(1)
+
+    if use_json:
+        json_output(rows)
+    else:
+        tsv_output(
+            rows,
+            columns=[
+                "name",
+                "change_pct",
+                "total_market_cap",
+                "turnover_rate",
+                "rise_count",
+                "fall_count",
+            ],
+        )
+
+
+@app.command("sector")
+def sector(
+    name: str = typer.Argument(help="Sector name, e.g. 白酒, 银行, 半导体"),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """行业板块成分股 — show constituents of a specific A-share sector."""
+    from ..market.akshare_provider import AKShareProvider
+
+    try:
+        rows = AKShareProvider.get_sector_constituents(name)
+    except Exception as e:
+        error_output(str(e))
+        raise typer.Exit(1)
+
+    if use_json:
+        json_output(rows)
+    else:
+        tsv_output(
+            rows,
+            columns=[
+                "code",
+                "name",
+                "price",
+                "change_pct",
+                "pe_ratio",
+                "pb_ratio",
+                "total_market_cap",
+            ],
         )
