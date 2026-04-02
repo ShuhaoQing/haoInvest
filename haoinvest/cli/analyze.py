@@ -448,3 +448,36 @@ def signals(
         kv_output(output)
         if verbose and result.explanation:
             print(result.explanation)
+
+
+@app.command()
+def peer(
+    symbol: str = typer.Argument(help="Stock symbol to find peers for"),
+    top_n: int = typer.Option(10, "--top", "-n", help="Number of peers to show"),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """同行业对比 — compare a stock with its sector peers."""
+    from ..analysis.peer import find_peers
+
+    mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
+    try:
+        rows = find_peers(symbol, mt, top_n=top_n)
+    except (ValueError, RuntimeError) as e:
+        error_output(str(e))
+        raise typer.Exit(1)
+
+    # Check for message-only results (errors/unsupported)
+    if rows and "message" in rows[0]:
+        print(rows[0]["message"])
+        return
+
+    if use_json:
+        json_output(rows)
+    else:
+        tsv_output(
+            rows,
+            columns=["Symbol", "Name", "Price", "Change%", "PE", "PB", "MarketCap"],
+        )
