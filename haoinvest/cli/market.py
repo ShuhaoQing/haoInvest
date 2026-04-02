@@ -92,3 +92,63 @@ def history(
         tsv_output(
             bars, columns=["trade_date", "open", "high", "low", "close", "volume"]
         )
+
+
+@app.command("sector-list")
+def sector_list(
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """行业板块排行 — list all A-share industry sectors with performance."""
+    from ..market.akshare_provider import AKShareProvider
+
+    try:
+        rows = AKShareProvider.get_sector_list()
+    except Exception as e:
+        error_output(str(e))
+        raise typer.Exit(1)
+
+    if use_json:
+        json_output(rows)
+    else:
+        tsv_output(
+            rows,
+            columns=[
+                "name",
+                "change_pct",
+                "total_market_cap",
+                "turnover_rate",
+                "rise_count",
+                "fall_count",
+            ],
+        )
+
+
+@app.command("sector")
+def sector(
+    name: str = typer.Argument(help="Sector name, e.g. 白酒, 银行, 半导体"),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """行业板块成分股 — show constituents of a specific A-share sector."""
+    from ..market.akshare_provider import AKShareProvider
+
+    try:
+        rows = AKShareProvider.get_sector_constituents(name)
+    except Exception as e:
+        error_output(str(e))
+        raise typer.Exit(1)
+
+    if use_json:
+        json_output(rows)
+    else:
+        tsv_output(
+            rows,
+            columns=[
+                "code",
+                "name",
+                "price",
+                "change_pct",
+                "pe_ratio",
+                "pb_ratio",
+                "total_market_cap",
+            ],
+        )

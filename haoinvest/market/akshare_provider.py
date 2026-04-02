@@ -201,6 +201,59 @@ class AKShareProvider(MarketProvider):
             logger.debug("Financial indicators failed for %s: %s", symbol, e)
             return {}
 
+    # -- Sector/Industry methods (A-share specific) --
+
+    @staticmethod
+    def get_sector_list() -> list[dict]:
+        """List all A-share industry boards with performance ranking.
+
+        Returns list of dicts with keys: name, change_pct, total_market_cap,
+        turnover_rate, rise_count, fall_count.
+        """
+        import akshare as ak
+
+        with _bypass_proxy():
+            df = ak.stock_board_industry_spot_em()
+        rows = []
+        for _, row in df.iterrows():
+            rows.append(
+                {
+                    "name": row.get("板块名称", ""),
+                    "change_pct": _parse_float(row.get("涨跌幅")),
+                    "total_market_cap": _parse_int(row.get("总市值")),
+                    "turnover_rate": _parse_float(row.get("换手率")),
+                    "rise_count": _parse_int(row.get("上涨家数")),
+                    "fall_count": _parse_int(row.get("下跌家数")),
+                }
+            )
+        return rows
+
+    @staticmethod
+    def get_sector_constituents(sector_name: str) -> list[dict]:
+        """Get stocks in a specific industry board.
+
+        Returns list of dicts with keys: code, name, price, change_pct,
+        pe_ratio, pb_ratio, total_market_cap.
+        """
+        import akshare as ak
+
+        with _bypass_proxy():
+            df = ak.stock_board_industry_cons_em(symbol=sector_name)
+        rows = []
+        for _, row in df.iterrows():
+            rows.append(
+                {
+                    "code": row.get("代码", ""),
+                    "name": row.get("名称", ""),
+                    "price": _parse_float(row.get("最新价")),
+                    "change_pct": _parse_float(row.get("涨跌幅")),
+                    "pe_ratio": _parse_float(row.get("市盈率-动态")),
+                    "pb_ratio": _parse_float(row.get("市净率")),
+                    "total_market_cap": _parse_int(row.get("总市值")),
+                }
+            )
+        return rows
+
     # -- Fallback methods --
 
     @staticmethod
