@@ -481,3 +481,118 @@ def peer(
             rows,
             columns=["Symbol", "Name", "Price", "Change%", "PE", "PB", "MarketCap"],
         )
+
+
+@app.command()
+def report(
+    symbol: str = typer.Argument(help="Stock/crypto symbol"),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
+    start: Optional[str] = typer.Option(
+        None, "--start", help="Start date YYYY-MM-DD (default: 1 year ago)"
+    ),
+    end: Optional[str] = typer.Option(
+        None, "--end", help="End date YYYY-MM-DD (default: today)"
+    ),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """综合分析报告 — full report with buy-readiness checklist."""
+    from ..analysis.report import full_stock_report
+
+    db = _init_db()
+    mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
+    end_date = date.fromisoformat(end) if end else date.today()
+    start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
+
+    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+
+    try:
+        r = full_stock_report(
+            db, symbol, mt, start_date, end_date, include_technical=True
+        )
+    except (ValueError, RuntimeError) as e:
+        error_output(str(e))
+        raise typer.Exit(1)
+
+    if use_json:
+        json_output(r)
+    else:
+        # Section: Basic Info
+        print("=== 基本信息 ===")
+        kv_output(
+            {
+                "Symbol": r.symbol,
+                "Name": r.name,
+                "Price": r.current_price,
+                "Sector": r.sector,
+                "Industry": r.industry,
+                "MarketCap": r.total_market_cap,
+            }
+        )
+        # Section: Valuation
+        print("\n=== 估值分析 ===")
+        kv_output(
+            {
+                "PE(TTM)": r.pe_ratio,
+                "PB": r.pb_ratio,
+                "PEG": r.peg_ratio,
+                "PE_Assessment": r.valuation.pe_assessment,
+                "PB_Assessment": r.valuation.pb_assessment,
+                "Overall": r.valuation.overall,
+            }
+        )
+        # Section: Financial Health
+        print("\n=== 财务健康 ===")
+        kv_output(
+            {
+                "ROE(%)": r.roe,
+                "ROA(%)": r.roa,
+                "DebtToEquity": r.debt_to_equity,
+                "RevenueGrowth": r.revenue_growth,
+                "ProfitMargin": r.profit_margin,
+                "GrossMargin": r.gross_margin,
+                "CurrentRatio": r.current_ratio,
+                "FreeCashFlow": r.free_cash_flow,
+            }
+        )
+        if r.financial_health:
+            kv_output(
+                {
+                    "Profitability": r.financial_health.profitability,
+                    "Growth": r.financial_health.growth,
+                    "Leverage": r.financial_health.leverage,
+                    "CashFlow": r.financial_health.cash_flow,
+                    "FinancialHealth": r.financial_health.overall,
+                }
+            )
+        # Section: Risk
+        print("\n=== 风险指标 ===")
+        rm = r.risk_metrics
+        kv_output(
+            {
+                "Volatility": rm.annualized_volatility,
+                "MaxDrawdown%": rm.max_drawdown_pct,
+                "Sharpe": rm.sharpe_ratio,
+                "Sortino": rm.sortino_ratio,
+                "TotalReturn%": rm.total_return_pct,
+            }
+        )
+        # Section: Technical
+        if r.signals:
+            print("\n=== 技术面 ===")
+            kv_output(
+                {
+                    "Signal": r.signals.overall_signal,
+                    "Confidence": r.signals.confidence,
+                    "Bullish": r.signals.bullish_count,
+                    "Bearish": r.signals.bearish_count,
+                }
+            )
+        # Section: Checklist
+        if r.checklist:
+            print("\n=== 买入准备度 ===")
+            for item in r.checklist.items:
+                print(f"  {item.dimension}: {item.score}/5 — {item.assessment}")
+            print(f"  总分: {r.checklist.total_score}/{r.checklist.max_score}")
+            print(f"  建议: {r.checklist.recommendation}")

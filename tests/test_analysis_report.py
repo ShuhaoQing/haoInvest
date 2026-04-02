@@ -1,16 +1,34 @@
-"""Tests for full_stock_report cache key correctness."""
+"""Tests for full_stock_report cache key correctness and checklist scoring."""
 
 from datetime import date
 from unittest.mock import patch
 
-from haoinvest.analysis.report import full_stock_report
+from typer.testing import CliRunner
+
+from haoinvest.analysis.report import (
+    _compute_checklist,
+    _score_growth,
+    _score_profitability,
+    _score_risk,
+    _score_technical,
+    _score_valuation,
+    full_stock_report,
+)
+from haoinvest.cli import app
 from haoinvest.db import Database
 from haoinvest.models import (
+    BuyReadinessChecklist,
+    ChecklistItem,
+    FinancialHealthAssessment,
     FundamentalAnalysis,
     MarketType,
     RiskMetrics,
+    SignalSummary,
+    StockReport,
     ValuationAssessment,
 )
+
+runner = CliRunner()
 
 
 def _make_fundamental(symbol: str = "AAPL") -> FundamentalAnalysis:
@@ -108,3 +126,150 @@ class TestFullStockReportCacheKey:
             full_stock_report(db, "AAPL", MarketType.US)
 
         assert mock_fundamental.call_count == 1
+
+
+# --- Checklist scoring tests ---
+
+
+class TestScoreValuation:
+    def test_undervalued(self):
+        assert _score_valuation("偏低估") == 5
+
+    def test_fair(self):
+        assert _score_valuation("估值合理") == 4
+
+    def test_overvalued(self):
+        assert _score_valuation("偏高估") == 2
+
+    def test_unknown(self):
+        assert _score_valuation("无法评估") == 3
+
+
+class TestScoreProfitability:
+    def test_excellent_roe(self):
+        assert _score_profitability(20.0, None) == 5
+
+    def test_fallback_margin(self):
+        assert _score_profitability(None, 25.0) == 5
+
+    def test_no_data(self):
+        assert _score_profitability(None, None) == 3
+
+
+class TestScoreGrowth:
+    def test_high(self):
+        assert _score_growth(0.25) == 5
+
+    def test_negative(self):
+        assert _score_growth(-0.10) == 2
+
+    def test_none(self):
+        assert _score_growth(None) == 3
+
+
+class TestScoreRisk:
+    def test_low_drawdown_high_sharpe(self):
+        assert _score_risk(-8.0, 1.5) == 5
+
+    def test_no_data(self):
+        assert _score_risk(None, None) == 3
+
+
+class TestScoreTechnical:
+    def test_bullish(self):
+        assert _score_technical("偏多", "高") == 5
+
+    def test_bearish(self):
+        assert _score_technical("偏空", "中") == 2
+
+
+class TestComputeChecklist:
+    def test_healthy_stock(self):
+        report = StockReport(
+            symbol="600519",
+            market_type="a_share",
+            current_price=1800.0,
+            valuation=ValuationAssessment(overall="偏低估"),
+            risk_metrics=RiskMetrics(max_drawdown_pct=-8.0, sharpe_ratio=1.5),
+            roe=20.0,
+            revenue_growth=0.25,
+            financial_health=FinancialHealthAssessment(
+                profitability="优秀", growth="高速增长"
+            ),
+            signals=SignalSummary(
+                symbol="600519",
+                market_type="a_share",
+                overall_signal="偏多",
+                confidence="高",
+            ),
+        )
+        checklist = _compute_checklist(report)
+        assert checklist.total_score >= 20
+        assert checklist.recommendation == "建议关注"
+
+    def test_weak_stock(self):
+        report = StockReport(
+            symbol="999999",
+            market_type="a_share",
+            current_price=5.0,
+            valuation=ValuationAssessment(overall="明显高估"),
+            risk_metrics=RiskMetrics(max_drawdown_pct=-45.0, sharpe_ratio=-0.5),
+            roe=2.0,
+            revenue_growth=-0.20,
+            financial_health=FinancialHealthAssessment(
+                profitability="偏弱", growth="负增长"
+            ),
+            signals=SignalSummary(
+                symbol="999999",
+                market_type="a_share",
+                overall_signal="偏空",
+                confidence="高",
+            ),
+        )
+        checklist = _compute_checklist(report)
+        assert checklist.recommendation == "建议回避"
+
+
+class TestReportCLI:
+    def test_report_command(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("HAOINVEST_DATA_DIR", str(tmp_path))
+        mock_report = StockReport(
+            symbol="600519",
+            name="贵州茅台",
+            sector="白酒",
+            market_type="a_share",
+            current_price=1800.0,
+            valuation=ValuationAssessment(
+                pe_assessment="偏高", pb_assessment="高估", overall="偏高估"
+            ),
+            risk_metrics=RiskMetrics(
+                annualized_volatility=25.0,
+                max_drawdown_pct=-15.0,
+                sharpe_ratio=0.85,
+            ),
+            roe=18.0,
+            financial_health=FinancialHealthAssessment(
+                profitability="优秀", overall="财务健康"
+            ),
+            checklist=BuyReadinessChecklist(
+                items=[
+                    ChecklistItem(dimension="估值", score=4, assessment="偏高估"),
+                    ChecklistItem(dimension="盈利能力", score=5, assessment="优秀"),
+                ],
+                total_score=9,
+                max_score=10,
+                recommendation="建议关注",
+            ),
+        )
+        with (
+            patch("haoinvest.cli.analyze._ensure_prices_cached"),
+            patch(
+                "haoinvest.analysis.report.full_stock_report",
+                return_value=mock_report,
+            ),
+        ):
+            result = runner.invoke(app, ["analyze", "report", "600519"])
+            assert result.exit_code == 0
+            assert "基本信息" in result.output
+            assert "估值分析" in result.output
+            assert "买入准备度" in result.output

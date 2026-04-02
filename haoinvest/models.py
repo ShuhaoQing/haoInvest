@@ -259,12 +259,30 @@ class RiskMetrics(BaseModel):
     )
 
 
+class ChecklistItem(BaseModel):
+    """A single buy-readiness checklist item."""
+
+    dimension: str
+    score: int = Field(description="1-5 scale")
+    assessment: str
+
+
+class BuyReadinessChecklist(BaseModel):
+    """Aggregated buy-readiness scoring across multiple dimensions."""
+
+    items: list[ChecklistItem] = Field(default_factory=list)
+    total_score: int = 0
+    max_score: int = 0
+    recommendation: str = "无法评估"
+
+
 class StockReport(BaseModel):
     """Combined fundamental analysis and risk metrics for a single stock."""
 
     symbol: str
     name: str = ""
     sector: str = ""
+    industry: str = ""
     market_type: str
     current_price: float
     currency: str = "CNY"
@@ -276,6 +294,19 @@ class StockReport(BaseModel):
     technical: Optional["TechnicalIndicators"] = None
     volume: Optional["VolumeAnalysis"] = None
     signals: Optional["SignalSummary"] = None
+    # Enhanced fields (Phase 1+5)
+    roe: Optional[float] = None
+    roa: Optional[float] = None
+    debt_to_equity: Optional[float] = None
+    revenue_growth: Optional[float] = None
+    profit_margin: Optional[float] = None
+    gross_margin: Optional[float] = None
+    operating_margin: Optional[float] = None
+    current_ratio: Optional[float] = None
+    free_cash_flow: Optional[float] = None
+    peg_ratio: Optional[float] = None
+    financial_health: Optional[FinancialHealthAssessment] = None
+    checklist: Optional[BuyReadinessChecklist] = None
 
 
 # --- Technical analysis models ---
