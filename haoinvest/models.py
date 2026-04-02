@@ -148,6 +148,7 @@ class BasicInfo(BaseModel):
 
     name: str = ""
     sector: str = ""
+    industry: str = ""
     currency: str = "CNY"
     market_type: str = ""
     pe_ratio: Optional[float] = None
@@ -156,6 +157,36 @@ class BasicInfo(BaseModel):
     total_market_cap: Optional[int] = None
     total_supply: Optional[float] = Field(
         default=None, description="Total token supply (crypto only)"
+    )
+    # Financial health metrics
+    roe: Optional[float] = Field(default=None, description="Return on Equity (%)")
+    roa: Optional[float] = Field(default=None, description="Return on Assets (%)")
+    debt_to_equity: Optional[float] = Field(
+        default=None, description="Debt-to-Equity ratio"
+    )
+    revenue_growth: Optional[float] = Field(
+        default=None, description="YoY revenue growth (%)"
+    )
+    profit_margin: Optional[float] = Field(
+        default=None, description="Net profit margin (%)"
+    )
+    gross_margin: Optional[float] = Field(
+        default=None, description="Gross profit margin (%)"
+    )
+    operating_margin: Optional[float] = Field(
+        default=None, description="Operating margin (%)"
+    )
+    current_ratio: Optional[float] = Field(
+        default=None, description="Current ratio (liquidity)"
+    )
+    free_cash_flow: Optional[float] = Field(
+        default=None, description="Free cash flow in local currency"
+    )
+    operating_cash_flow: Optional[float] = Field(
+        default=None, description="Operating cash flow in local currency"
+    )
+    peg_ratio: Optional[float] = Field(
+        default=None, description="Price/Earnings to Growth ratio"
     )
 
 
@@ -170,12 +201,23 @@ class ValuationAssessment(BaseModel):
     overall: str = "无法评估"
 
 
+class FinancialHealthAssessment(BaseModel):
+    """Multi-dimensional financial health assessment with Chinese labels."""
+
+    profitability: str = "N/A"
+    growth: str = "N/A"
+    leverage: str = "N/A"
+    cash_flow: str = "N/A"
+    overall: str = "无法评估"
+
+
 class FundamentalAnalysis(BaseModel):
-    """Fundamental analysis result for a single stock (PE/PB, valuation)."""
+    """Fundamental analysis result for a single stock."""
 
     symbol: str
     name: str = ""
     sector: str = ""
+    industry: str = ""
     market_type: str
     current_price: float
     currency: str = "CNY"
@@ -183,6 +225,21 @@ class FundamentalAnalysis(BaseModel):
     pb_ratio: Optional[float] = None
     total_market_cap: Optional[int] = None
     valuation: ValuationAssessment = Field(default_factory=ValuationAssessment)
+    # Enhanced financial metrics
+    roe: Optional[float] = None
+    roa: Optional[float] = None
+    debt_to_equity: Optional[float] = None
+    revenue_growth: Optional[float] = None
+    profit_margin: Optional[float] = None
+    gross_margin: Optional[float] = None
+    operating_margin: Optional[float] = None
+    current_ratio: Optional[float] = None
+    free_cash_flow: Optional[float] = None
+    operating_cash_flow: Optional[float] = None
+    peg_ratio: Optional[float] = None
+    financial_health: FinancialHealthAssessment = Field(
+        default_factory=FinancialHealthAssessment
+    )
 
 
 class RiskMetrics(BaseModel):

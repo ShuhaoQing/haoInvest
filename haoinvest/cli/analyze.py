@@ -45,9 +45,12 @@ def fundamental(
     market_type: Optional[str] = typer.Option(
         None, "--market-type", "-m", help="Override: a_share, crypto, us"
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show financial health assessment"
+    ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
-    """Fundamental analysis — PE/PB, valuation assessment."""
+    """Fundamental analysis — valuation, financial health, growth metrics."""
     mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
     try:
         result = analyze_stock(symbol, mt)
@@ -58,20 +61,41 @@ def fundamental(
     if use_json:
         json_output(result)
     else:
-        kv_output(
-            {
-                "Symbol": result.symbol,
-                "Name": result.name,
-                "Price": result.current_price,
-                "PE(TTM)": result.pe_ratio,
-                "PB": result.pb_ratio,
-                "Sector": result.sector,
-                "MarketCap": result.total_market_cap,
-                "PE_Assessment": result.valuation.pe_assessment,
-                "PB_Assessment": result.valuation.pb_assessment,
-                "Overall": result.valuation.overall,
-            }
-        )
+        output: dict = {
+            "Symbol": result.symbol,
+            "Name": result.name,
+            "Price": result.current_price,
+            "PE(TTM)": result.pe_ratio,
+            "PB": result.pb_ratio,
+            "Sector": result.sector,
+            "Industry": result.industry,
+            "MarketCap": result.total_market_cap,
+            "ROE(%)": result.roe,
+            "ROA(%)": result.roa,
+            "DebtToEquity": result.debt_to_equity,
+            "RevenueGrowth": result.revenue_growth,
+            "ProfitMargin": result.profit_margin,
+            "GrossMargin": result.gross_margin,
+            "OperatingMargin": result.operating_margin,
+            "CurrentRatio": result.current_ratio,
+            "FreeCashFlow": result.free_cash_flow,
+            "PEG": result.peg_ratio,
+            "PE_Assessment": result.valuation.pe_assessment,
+            "PB_Assessment": result.valuation.pb_assessment,
+            "Overall_Valuation": result.valuation.overall,
+        }
+        if verbose:
+            fh = result.financial_health
+            output.update(
+                {
+                    "Profitability": fh.profitability,
+                    "Growth": fh.growth,
+                    "Leverage": fh.leverage,
+                    "CashFlow": fh.cash_flow,
+                    "FinancialHealth": fh.overall,
+                }
+            )
+        kv_output(output)
 
 
 @app.command()

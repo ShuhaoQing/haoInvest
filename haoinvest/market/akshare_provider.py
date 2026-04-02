@@ -159,6 +159,9 @@ class AKShareProvider(MarketProvider):
         pb_raw = info.get("市净率", "")
         cap_raw = info.get("总市值", "")
 
+        # Fetch additional financial indicators (graceful fallback)
+        fin = AKShareProvider._akshare_financial_indicators(symbol)
+
         return BasicInfo(
             name=info.get("股票简称", ""),
             sector=info.get("行业", ""),
@@ -167,7 +170,36 @@ class AKShareProvider(MarketProvider):
             total_market_cap=_parse_int(cap_raw),
             pe_ratio=_parse_float(pe_raw),
             pb_ratio=_parse_float(pb_raw),
+            **fin,
         )
+
+    @staticmethod
+    def _akshare_financial_indicators(symbol: str) -> dict:
+        """Fetch financial health metrics from AKShare.
+
+        Returns a dict of optional fields for BasicInfo.
+        Gracefully returns empty dict on any failure.
+        """
+        try:
+            import akshare as ak
+
+            df = ak.stock_financial_analysis_indicator(symbol=symbol)
+            if df.empty:
+                return {}
+            # Take the most recent period (first row)
+            latest = df.iloc[0]
+            return {
+                "roe": _parse_float(latest.get("净资产收益率(%)")),
+                "roa": _parse_float(latest.get("总资产报酬率(%)")),
+                "debt_to_equity": _parse_float(latest.get("资产负债率(%)")),
+                "profit_margin": _parse_float(latest.get("销售净利率(%)")),
+                "gross_margin": _parse_float(latest.get("销售毛利率(%)")),
+                "operating_margin": _parse_float(latest.get("营业利润率(%)")),
+                "current_ratio": _parse_float(latest.get("流动比率")),
+            }
+        except Exception as e:
+            logger.debug("Financial indicators failed for %s: %s", symbol, e)
+            return {}
 
     # -- Fallback methods --
 
