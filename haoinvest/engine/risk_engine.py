@@ -14,6 +14,9 @@ def compute_risk_metrics(
     """Compute risk metrics from a daily returns Series (with DatetimeIndex).
 
     Returns a RiskMetrics model. The num_days field is left at 0 — the adapter fills it in.
+
+    Raises:
+        quantstats DataValidationError if returns is empty (caller must validate).
     """
     daily_rf = risk_free_rate / 252
 
@@ -44,5 +47,5 @@ def compute_correlation_matrix(
         result[col] = {}
         for row in corr.index:
             val = safe_float(corr.loc[row, col])
-            result[col][row] = round(val, 4) if val is not None else 0.0
+            result[col][row] = round(val, 4) if val is not None else None
     return result

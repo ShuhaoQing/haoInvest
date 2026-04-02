@@ -11,8 +11,9 @@ Built for a beginner investor in China covering A-shares, US stocks, HK stocks, 
 - **Portfolio Management** — Record trades, track positions, calculate time-weighted returns (TWR)
 - **Market Data** — Real-time quotes from AKShare (A-shares), Yahoo Finance (US/HK), Crypto.com (crypto)
 - **Fundamental Analysis** — PE/PB/ROE valuation assessment
-- **Risk Metrics** — Annualized volatility, max drawdown, Sharpe ratio
-- **Portfolio Optimization** — Equal weight, risk parity, minimum volatility allocation strategies
+- **Risk Metrics** — Annualized volatility, max drawdown, Sharpe ratio, Sortino ratio (powered by QuantStats)
+- **Technical Analysis** — MA, MACD, RSI, Bollinger Bands with Chinese explanations (powered by pandas-ta)
+- **Portfolio Optimization** — Equal weight, risk parity, minimum volatility, maximum Sharpe allocation (powered by PyPortfolioOpt)
 - **Investment Journal** — Structured entries with decision type and emotion tagging for pattern analysis
 - **Claude Code Skill** — Natural language interface via unified `/haoinvest` skill
 
@@ -49,7 +50,7 @@ uv run haoinvest analyze risk --symbol NVDA       # Volatility, Sharpe, drawdown
 uv run haoinvest analyze correlation 600519,NVDA  # Correlation matrix
 
 # Strategy
-uv run haoinvest strategy optimize --method risk_parity
+uv run haoinvest strategy optimize --method risk_parity  # also: max_sharpe, min_volatility
 uv run haoinvest strategy rebalance --target '{"600519": 0.5, "NVDA": 0.5}'
 
 # Journal
@@ -113,15 +114,17 @@ pytest tests/test_fx.py          # Single module
 
 ```
 ┌─────────────────────────────────────┐
-│  Claude Code Skills (5 skills)      │  ← Natural language interface
+│  Claude Code Skill (/haoinvest)     │  ← Natural language interface
 ├─────────────────────────────────────┤
-│  Python Library (haoinvest/)        │  ← Business logic
-│  ├── portfolio/  analysis/          │
-│  ├── market/     strategy/          │
-│  └── journal     fx                 │
+│  CLI (haoinvest/cli/)               │  ← Typer commands, TSV/KV/JSON output
 ├─────────────────────────────────────┤
-│  SQLite + External APIs             │  ← Data & storage
-│  (AKShare, yfinance, Crypto.com)    │
+│  Adapters (analysis/, strategy/)    │  ← Thin wrappers, caching, I/O
+├─────────────────────────────────────┤
+│  Engine (engine/)                   │  ← Pure computation, no DB dependency
+│  pandas-ta · QuantStats · PyPfOpt  │
+├─────────────────────────────────────┤
+│  Data (market/, portfolio/, db.py)  │  ← Providers, positions, SQLite
+│  AKShare · yfinance · Crypto.com   │
 └─────────────────────────────────────┘
 ```
 

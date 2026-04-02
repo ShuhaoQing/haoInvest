@@ -1,5 +1,6 @@
 """Tests for engine.risk_engine — QuantStats based risk metrics."""
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -56,7 +57,8 @@ class TestComputeRiskMetrics:
 
 
 class TestComputeCorrelationMatrix:
-    def test_perfect_correlation(self):
+    def test_constant_returns_edge_case(self):
+        """Constant returns → std=0 → corr=NaN → returns None."""
         idx = pd.date_range("2025-01-01", periods=30, freq="B")
         df = pd.DataFrame(
             {"A": [0.01] * 30, "B": [0.01] * 30},
@@ -64,13 +66,11 @@ class TestComputeCorrelationMatrix:
         )
         matrix = compute_correlation_matrix(df)
         assert "A" in matrix and "B" in matrix
-        # Constant returns → std=0 → corr=NaN, but self-correlation = 1.0
-        # This is an edge case; test with varying data instead
+        assert matrix["A"]["A"] is None
+        assert matrix["A"]["B"] is None
 
     def test_varying_correlation(self):
         idx = pd.date_range("2025-01-01", periods=30, freq="B")
-        import numpy as np
-
         np.random.seed(42)
         a = np.random.normal(0.01, 0.02, 30)
         df = pd.DataFrame({"A": a, "B": a * 0.5 + 0.005}, index=idx)
@@ -79,8 +79,6 @@ class TestComputeCorrelationMatrix:
 
     def test_negative_correlation(self):
         idx = pd.date_range("2025-01-01", periods=30, freq="B")
-        import numpy as np
-
         np.random.seed(42)
         a = np.random.normal(0.01, 0.02, 30)
         df = pd.DataFrame({"A": a, "B": -a}, index=idx)

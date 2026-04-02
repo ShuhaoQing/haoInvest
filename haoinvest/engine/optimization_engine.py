@@ -13,6 +13,7 @@ def equal_weight(symbols: list[str]) -> dict[str, float]:
     w = round(1.0 / len(symbols), 4)
     weights = {s: w for s in symbols}
     remainder = 1.0 - sum(weights.values())
+    # Remainder assigned to last asset to ensure weights sum exactly to 1.0
     weights[symbols[-1]] = round(weights[symbols[-1]] + remainder, 4)
     return weights
 

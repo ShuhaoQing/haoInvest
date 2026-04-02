@@ -1,6 +1,6 @@
 """Tests for engine.databridge — PriceBar to DataFrame conversion."""
 
-from datetime import date
+from datetime import date, timedelta
 
 import pandas as pd
 
@@ -22,7 +22,7 @@ def _make_bars(
     """Helper to build PriceBar list from close prices."""
     bars = []
     for i, c in enumerate(closes):
-        d = date(start.year, start.month, start.day + i)
+        d = start + timedelta(days=i)
         bars.append(
             PriceBar(
                 symbol=symbol,
