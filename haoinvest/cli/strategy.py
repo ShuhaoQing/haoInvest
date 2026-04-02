@@ -39,7 +39,9 @@ def _ensure_prices_cached(
 @app.command()
 def optimize(
     method: str = typer.Option(
-        "risk_parity", "--method", help="equal_weight, risk_parity, or min_volatility"
+        "risk_parity",
+        "--method",
+        help="equal_weight, risk_parity, min_volatility, or max_sharpe",
     ),
     symbols: Optional[str] = typer.Option(
         None, "--symbols", "-s", help="Comma-separated symbols (default: all holdings)"
