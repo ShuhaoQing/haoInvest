@@ -5,8 +5,10 @@ AKShare relies on eastmoney push2 endpoints which are frequently unreachable
 Sina/Tencent/eastmoney-emweb APIs that use different, more stable endpoints.
 """
 
+import json
 import logging
 import os
+import re
 from contextlib import contextmanager
 from datetime import date
 from typing import Any, Callable
@@ -211,10 +213,32 @@ class AKShareProvider(MarketProvider):
         Returns list of dicts with keys: name, change_pct, total_market_cap,
         turnover_rate, rise_count, fall_count.
         """
+        return _with_fallback(
+            primary_fn=AKShareProvider._akshare_sector_list,
+            fallback_fn=AKShareProvider._sina_sector_list,
+            label="get_sector_list()",
+        )
+
+    @staticmethod
+    def get_sector_constituents(sector_name: str) -> list[dict]:
+        """Get stocks in a specific industry board.
+
+        Returns list of dicts with keys: code, name, price, change_pct,
+        pe_ratio, pb_ratio, total_market_cap.
+        """
+        return _with_fallback(
+            primary_fn=lambda: AKShareProvider._akshare_sector_constituents(
+                sector_name
+            ),
+            fallback_fn=lambda: AKShareProvider._sina_sector_constituents(sector_name),
+            label=f"get_sector_constituents({sector_name})",
+        )
+
+    @staticmethod
+    def _akshare_sector_list() -> list[dict]:
         import akshare as ak
 
-        with _bypass_proxy():
-            df = ak.stock_board_industry_spot_em()
+        df = ak.stock_board_industry_spot_em()
         rows = []
         for _, row in df.iterrows():
             rows.append(
@@ -230,16 +254,10 @@ class AKShareProvider(MarketProvider):
         return rows
 
     @staticmethod
-    def get_sector_constituents(sector_name: str) -> list[dict]:
-        """Get stocks in a specific industry board.
-
-        Returns list of dicts with keys: code, name, price, change_pct,
-        pe_ratio, pb_ratio, total_market_cap.
-        """
+    def _akshare_sector_constituents(sector_name: str) -> list[dict]:
         import akshare as ak
 
-        with _bypass_proxy():
-            df = ak.stock_board_industry_cons_em(symbol=sector_name)
+        df = ak.stock_board_industry_cons_em(symbol=sector_name)
         rows = []
         for _, row in df.iterrows():
             rows.append(
@@ -342,6 +360,86 @@ class AKShareProvider(MarketProvider):
         )
 
     @staticmethod
+    def _sina_sector_list() -> list[dict]:
+        """Fallback: sector list from Sina Finance API.
+
+        Sina fields per sector: code, name, stock_count, avg_price, change,
+        change_pct, volume, amount, leading_code, leading_turnover,
+        leading_price, leading_change, leading_name
+        """
+        data = _sina_sector_data()
+        rows = []
+        for fields in data.values():
+            if len(fields) < 6:
+                continue
+            rows.append(
+                {
+                    "name": fields[1],
+                    "change_pct": _parse_float(fields[5]),
+                    "total_market_cap": None,
+                    "turnover_rate": None,
+                    "rise_count": None,
+                    "fall_count": None,
+                }
+            )
+        # Sort by change_pct descending (match eastmoney default sort)
+        rows.sort(key=lambda r: r["change_pct"] or 0, reverse=True)
+        return rows
+
+    @staticmethod
+    def _sina_sector_constituents(sector_name: str) -> list[dict]:
+        """Fallback: sector constituents from Sina Finance API.
+
+        Looks up the Sina node code for the given Chinese sector name,
+        then fetches constituent stocks from the Sina HQ API.
+        """
+        # Find the Sina node code matching the sector name
+        data = _sina_sector_data()
+        node_code = None
+        for code, fields in data.items():
+            if len(fields) >= 2 and fields[1] == sector_name:
+                node_code = code
+                break
+        if node_code is None:
+            raise ValueError(
+                f"Sector '{sector_name}' not found. "
+                "Use 'market sector-list' to see available sectors."
+            )
+
+        r = requests.get(
+            "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php"
+            "/Market_Center.getHQNodeData",
+            params={
+                "page": 1,
+                "num": 200,
+                "sort": "changepercent",
+                "asc": 0,
+                "node": node_code,
+            },
+            headers={"Referer": "https://finance.sina.com.cn"},
+            timeout=10,
+        )
+        r.encoding = "gbk"
+        stocks = r.json()
+
+        rows = []
+        for s in stocks:
+            rows.append(
+                {
+                    "code": s.get("code", ""),
+                    "name": s.get("name", ""),
+                    "price": _parse_float(s.get("trade")),
+                    "change_pct": _parse_float(s.get("changepercent")),
+                    "pe_ratio": _parse_float(s.get("per")),
+                    "pb_ratio": _parse_float(s.get("pb")),
+                    "total_market_cap": (
+                        int(s["mktcap"] * 10000) if s.get("mktcap") else None
+                    ),
+                }
+            )
+        return rows
+
+    @staticmethod
     def _tencent_valuation(symbol: str) -> dict:
         """Fetch PE/PB/market cap from Tencent quote API.
 
@@ -379,6 +477,21 @@ class AKShareProvider(MarketProvider):
             logger.debug("Tencent valuation failed for %s: %s", symbol, e)
 
         return result
+
+
+def _sina_sector_data() -> dict[str, list[str]]:
+    """Fetch Sina industry board data. Returns {node_code: [fields...]}."""
+    r = requests.get(
+        "https://vip.stock.finance.sina.com.cn/q/view/newSinaHy.php",
+        headers={"Referer": "https://finance.sina.com.cn"},
+        timeout=10,
+    )
+    r.encoding = "gbk"
+    m = re.search(r"=\s*(\{.*\})", r.text)
+    if not m:
+        raise RuntimeError("Failed to parse Sina sector response")
+    data = json.loads(m.group(1))
+    return {k: v.split(",") for k, v in data.items()}
 
 
 def _parse_float(value: Any) -> float | None:
