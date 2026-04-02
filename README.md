@@ -10,7 +10,10 @@ Built for a beginner investor in China covering A-shares, US stocks, HK stocks, 
 
 - **Portfolio Management** — Record trades, track positions, calculate time-weighted returns (TWR)
 - **Market Data** — Real-time quotes from AKShare (A-shares), Yahoo Finance (US/HK), Crypto.com (crypto)
-- **Fundamental Analysis** — PE/PB/ROE valuation assessment
+- **Fundamental Analysis** — PE/PB/ROE valuation assessment with financial health scoring; batch support for multi-symbol comparison
+- **Peer Comparison** — Find and compare same-sector stocks by valuation and performance
+- **Sector Browsing** — Browse A-share industry sectors and their constituent stocks
+- **Comprehensive Report** — Full stock report with buy-readiness checklist combining fundamental, technical, and risk analysis
 - **Risk Metrics** — Annualized volatility, max drawdown, Sharpe ratio, Sortino ratio (powered by QuantStats)
 - **Technical Analysis** — MA, MACD, RSI, Bollinger Bands with Chinese explanations (powered by pandas-ta)
 - **Portfolio Optimization** — Equal weight, risk parity, minimum volatility, maximum Sharpe allocation (powered by PyPortfolioOpt)
@@ -46,8 +49,15 @@ uv run haoinvest portfolio returns                # P&L summary
 
 # Analysis
 uv run haoinvest analyze fundamental 600519       # PE/PB valuation
+uv run haoinvest analyze fundamental 600519,000858 # Batch comparison
 uv run haoinvest analyze risk --symbol NVDA       # Volatility, Sharpe, drawdown
 uv run haoinvest analyze correlation 600519,NVDA  # Correlation matrix
+uv run haoinvest analyze peer 600519              # Same-sector peer comparison
+uv run haoinvest analyze report 600519            # Full report with buy-readiness checklist
+
+# Sectors
+uv run haoinvest market sector-list               # A-share industry sectors
+uv run haoinvest market sector 白酒               # Sector constituent stocks
 
 # Strategy
 uv run haoinvest strategy optimize --method risk_parity  # also: max_sharpe, min_volatility

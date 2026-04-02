@@ -47,7 +47,14 @@ haoinvest/
 │   ├── risk_engine.py       # Risk metrics (vol, drawdown, Sharpe, Sortino)
 │   └── optimization_engine.py # Portfolio optimization (HRP, min vol, max Sharpe)
 ├── portfolio/         # Trade recording, position tracking, returns (TWR)
-├── analysis/          # Thin adapters over engine — fundamental, risk, technical
+├── analysis/          # Thin adapters over engine
+│   ├── fundamental.py # Valuation assessment (PE/PB/ROE), financial health
+│   ├── technical.py   # Technical indicator adapter
+│   ├── risk.py        # Risk metrics adapter
+│   ├── peer.py        # Same-sector peer comparison
+│   ├── report.py      # Full stock report with buy-readiness checklist
+│   ├── signals.py     # Aggregate buy/sell signals
+│   └── volume.py      # Volume analysis
 ├── market/            # Provider registry — akshare, yfinance, crypto MCP
 └── strategy/          # Optimizer adapter + rebalance logic
 ```
