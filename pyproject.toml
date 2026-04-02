@@ -9,6 +9,10 @@ dependencies = [
     "httpx==0.28.1",
     "yfinance==1.2.0",
     "typer==0.24.1",
+    "pandas==2.2.3",
+    "pandas-ta-classic==0.4.47",
+    "quantstats==0.0.81",
+    "pyportfolioopt==1.6.0",
 ]
 
 [project.scripts]
