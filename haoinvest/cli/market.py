@@ -25,39 +25,79 @@ def _detect_market_type(symbol: str) -> MarketType:
 @app.command()
 def quote(
     symbol: str = typer.Argument(
-        help="Stock/crypto symbol, e.g. 600519, BTC_USDT, AAPL"
+        help="Stock/crypto symbol(s), comma-separated for batch, e.g. 600519,000858"
     ),
     market_type: Optional[str] = typer.Option(
         None, "--market-type", "-m", help="Override: a_share, crypto, us"
     ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
-    """Get current price and basic info for a symbol."""
-    mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
-    try:
-        provider = get_provider(mt)
-        price = provider.get_current_price(symbol)
-        info = provider.get_basic_info(symbol)
-    except (ValueError, RuntimeError) as e:
-        error_output(str(e))
-        raise typer.Exit(1)
+    """Get current price and basic info for symbol(s)."""
+    symbol_list = [s.strip() for s in symbol.split(",")]
 
-    result = {
-        "Symbol": symbol,
-        "Name": info.name,
-        "Price": price,
-        "Currency": info.currency,
-        "Sector": info.sector,
-        "PE(TTM)": info.pe_ratio,
-        "PB": info.pb_ratio,
-        "MarketCap": info.total_market_cap,
-        "MarketType": mt.value,
-    }
+    if len(symbol_list) == 1:
+        # Single symbol — kv_output (original behavior)
+        mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
+        try:
+            provider = get_provider(mt)
+            price = provider.get_current_price(symbol)
+            info = provider.get_basic_info(symbol)
+        except (ValueError, RuntimeError) as e:
+            error_output(str(e))
+            raise typer.Exit(1)
 
-    if use_json:
-        json_output(result)
+        result = {
+            "Symbol": symbol,
+            "Name": info.name,
+            "Price": price,
+            "Currency": info.currency,
+            "Sector": info.sector,
+            "PE(TTM)": info.pe_ratio,
+            "PB": info.pb_ratio,
+            "MarketCap": info.total_market_cap,
+            "MarketType": mt.value,
+        }
+        if use_json:
+            json_output(result)
+        else:
+            kv_output(result)
     else:
-        kv_output(result)
+        # Batch — tsv_output comparison table
+        rows = []
+        for s in symbol_list:
+            mt = MarketType(market_type) if market_type else _detect_market_type(s)
+            try:
+                provider = get_provider(mt)
+                price = provider.get_current_price(s)
+                info = provider.get_basic_info(s)
+                rows.append(
+                    {
+                        "Symbol": s,
+                        "Name": info.name,
+                        "Price": price,
+                        "PE(TTM)": info.pe_ratio,
+                        "PB": info.pb_ratio,
+                        "Sector": info.sector,
+                        "MarketCap": info.total_market_cap,
+                    }
+                )
+            except (ValueError, RuntimeError) as e:
+                rows.append({"Symbol": s, "Name": f"ERROR: {e}"})
+        if use_json:
+            json_output(rows)
+        else:
+            tsv_output(
+                rows,
+                columns=[
+                    "Symbol",
+                    "Name",
+                    "Price",
+                    "PE(TTM)",
+                    "PB",
+                    "Sector",
+                    "MarketCap",
+                ],
+            )
 
 
 @app.command()

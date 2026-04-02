@@ -12,7 +12,7 @@ from ..analysis.technical import analyze_technical
 from ..analysis.volume import analyze_volume
 from ..db import Database
 from ..models import MarketType
-from .formatters import error_output, json_output, kv_output
+from .formatters import error_output, json_output, kv_output, tsv_output
 from .market import _detect_market_type
 
 app = typer.Typer(help="Analysis — fundamental, risk, technical, volume, signals.")
@@ -41,7 +41,9 @@ def _ensure_prices_cached(
 
 @app.command()
 def fundamental(
-    symbol: str = typer.Argument(help="Stock/crypto symbol"),
+    symbol: str = typer.Argument(
+        help="Stock/crypto symbol(s), comma-separated for batch"
+    ),
     market_type: Optional[str] = typer.Option(
         None, "--market-type", "-m", help="Override: a_share, crypto, us"
     ),
@@ -51,51 +53,97 @@ def fundamental(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Fundamental analysis — valuation, financial health, growth metrics."""
-    mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
-    try:
-        result = analyze_stock(symbol, mt)
-    except (ValueError, RuntimeError) as e:
-        error_output(str(e))
-        raise typer.Exit(1)
+    symbol_list = [s.strip() for s in symbol.split(",")]
 
-    if use_json:
-        json_output(result)
+    if len(symbol_list) == 1:
+        # Single symbol — kv_output
+        mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
+        try:
+            result = analyze_stock(symbol, mt)
+        except (ValueError, RuntimeError) as e:
+            error_output(str(e))
+            raise typer.Exit(1)
+
+        if use_json:
+            json_output(result)
+        else:
+            output: dict = {
+                "Symbol": result.symbol,
+                "Name": result.name,
+                "Price": result.current_price,
+                "PE(TTM)": result.pe_ratio,
+                "PB": result.pb_ratio,
+                "Sector": result.sector,
+                "Industry": result.industry,
+                "MarketCap": result.total_market_cap,
+                "ROE(%)": result.roe,
+                "ROA(%)": result.roa,
+                "DebtToEquity": result.debt_to_equity,
+                "RevenueGrowth": result.revenue_growth,
+                "ProfitMargin": result.profit_margin,
+                "GrossMargin": result.gross_margin,
+                "OperatingMargin": result.operating_margin,
+                "CurrentRatio": result.current_ratio,
+                "FreeCashFlow": result.free_cash_flow,
+                "PEG": result.peg_ratio,
+                "PE_Assessment": result.valuation.pe_assessment,
+                "PB_Assessment": result.valuation.pb_assessment,
+                "Overall_Valuation": result.valuation.overall,
+            }
+            if verbose:
+                fh = result.financial_health
+                output.update(
+                    {
+                        "Profitability": fh.profitability,
+                        "Growth": fh.growth,
+                        "Leverage": fh.leverage,
+                        "CashFlow": fh.cash_flow,
+                        "FinancialHealth": fh.overall,
+                    }
+                )
+            kv_output(output)
     else:
-        output: dict = {
-            "Symbol": result.symbol,
-            "Name": result.name,
-            "Price": result.current_price,
-            "PE(TTM)": result.pe_ratio,
-            "PB": result.pb_ratio,
-            "Sector": result.sector,
-            "Industry": result.industry,
-            "MarketCap": result.total_market_cap,
-            "ROE(%)": result.roe,
-            "ROA(%)": result.roa,
-            "DebtToEquity": result.debt_to_equity,
-            "RevenueGrowth": result.revenue_growth,
-            "ProfitMargin": result.profit_margin,
-            "GrossMargin": result.gross_margin,
-            "OperatingMargin": result.operating_margin,
-            "CurrentRatio": result.current_ratio,
-            "FreeCashFlow": result.free_cash_flow,
-            "PEG": result.peg_ratio,
-            "PE_Assessment": result.valuation.pe_assessment,
-            "PB_Assessment": result.valuation.pb_assessment,
-            "Overall_Valuation": result.valuation.overall,
-        }
-        if verbose:
-            fh = result.financial_health
-            output.update(
-                {
-                    "Profitability": fh.profitability,
-                    "Growth": fh.growth,
-                    "Leverage": fh.leverage,
-                    "CashFlow": fh.cash_flow,
-                    "FinancialHealth": fh.overall,
+        # Batch — tsv comparison table
+        rows = []
+        for s in symbol_list:
+            mt = MarketType(market_type) if market_type else _detect_market_type(s)
+            try:
+                r = analyze_stock(s, mt)
+                row: dict = {
+                    "Symbol": r.symbol,
+                    "Name": r.name,
+                    "Price": r.current_price,
+                    "PE": r.pe_ratio,
+                    "PB": r.pb_ratio,
+                    "ROE(%)": r.roe,
+                    "Growth": r.revenue_growth,
+                    "Margin": r.profit_margin,
+                    "D/E": r.debt_to_equity,
+                    "Valuation": r.valuation.overall,
                 }
-            )
-        kv_output(output)
+                if verbose:
+                    row["Health"] = r.financial_health.overall
+                rows.append(row)
+            except (ValueError, RuntimeError) as e:
+                rows.append({"Symbol": s, "Name": f"ERROR: {e}"})
+        if use_json:
+            json_output(rows)
+        else:
+            columns = [
+                "Symbol",
+                "Name",
+                "Price",
+                "PE",
+                "PB",
+                "ROE(%)",
+                "Growth",
+                "Margin",
+                "D/E",
+                "Valuation",
+            ]
+            if verbose:
+                columns.append("Health")
+            tsv_output(rows, columns=columns)
 
 
 @app.command()
@@ -189,7 +237,9 @@ def correlation(
 
 @app.command()
 def technical(
-    symbol: str = typer.Argument(help="Stock/crypto symbol"),
+    symbol: str = typer.Argument(
+        help="Stock/crypto symbol(s), comma-separated for batch"
+    ),
     market_type: Optional[str] = typer.Option(
         None, "--market-type", "-m", help="Override: a_share, crypto, us"
     ),
@@ -206,66 +256,107 @@ def technical(
 ) -> None:
     """Technical indicators — MA, MACD, RSI, Bollinger Bands."""
     db = _init_db()
-    mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
+    symbol_list = [s.strip() for s in symbol.split(",")]
 
-    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
-    result = analyze_technical(db, symbol, mt, start_date, end_date, verbose=verbose)
+    if len(symbol_list) == 1:
+        # Single symbol — detailed kv_output (original behavior)
+        mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
+        _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+        result = analyze_technical(
+            db, symbol, mt, start_date, end_date, verbose=verbose
+        )
 
-    if use_json:
-        json_output(result)
-    else:
-        output = {"symbol": result.symbol, "date": str(result.latest_date)}
-        if result.message:
-            output["message"] = result.message
+        if use_json:
+            json_output(result)
         else:
-            ma = result.moving_averages
-            output.update(
-                {
-                    "close": result.latest_close,
-                    "SMA5": ma.sma_5,
-                    "SMA10": ma.sma_10,
-                    "SMA20": ma.sma_20,
-                    "SMA60": ma.sma_60,
-                    "EMA12": ma.ema_12,
-                    "EMA26": ma.ema_26,
-                    "MA_Trend": ma.trend,
-                }
+            output = {"symbol": result.symbol, "date": str(result.latest_date)}
+            if result.message:
+                output["message"] = result.message
+            else:
+                ma = result.moving_averages
+                output.update(
+                    {
+                        "close": result.latest_close,
+                        "SMA5": ma.sma_5,
+                        "SMA10": ma.sma_10,
+                        "SMA20": ma.sma_20,
+                        "SMA60": ma.sma_60,
+                        "EMA12": ma.ema_12,
+                        "EMA26": ma.ema_26,
+                        "MA_Trend": ma.trend,
+                    }
+                )
+                if verbose and ma.explanation:
+                    output["MA_Explain"] = ma.explanation
+                output.update(
+                    {
+                        "MACD": result.macd.macd_line,
+                        "Signal": result.macd.signal_line,
+                        "Histogram": result.macd.histogram,
+                        "MACD_Signal": result.macd.signal,
+                    }
+                )
+                if verbose and result.macd.explanation:
+                    output["MACD_Explain"] = result.macd.explanation
+                output.update(
+                    {
+                        "RSI": result.rsi.rsi,
+                        "RSI_Assessment": result.rsi.assessment,
+                    }
+                )
+                if verbose and result.rsi.explanation:
+                    output["RSI_Explain"] = result.rsi.explanation
+                bb = result.bollinger
+                output.update(
+                    {
+                        "BB_Upper": bb.upper,
+                        "BB_Middle": bb.middle,
+                        "BB_Lower": bb.lower,
+                        "BB_Bandwidth%": bb.bandwidth_pct,
+                        "BB_Position": bb.position,
+                    }
+                )
+                if verbose and bb.explanation:
+                    output["BB_Explain"] = bb.explanation
+            kv_output(output)
+    else:
+        # Batch — tsv comparison table with key indicators
+        rows = []
+        for s in symbol_list:
+            mt = MarketType(market_type) if market_type else _detect_market_type(s)
+            _ensure_prices_cached(db, s, mt, start_date, end_date)
+            result = analyze_technical(db, s, mt, start_date, end_date)
+            if result.message:
+                rows.append({"Symbol": s, "Trend": result.message})
+            else:
+                rows.append(
+                    {
+                        "Symbol": s,
+                        "Close": result.latest_close,
+                        "Trend": result.moving_averages.trend,
+                        "MACD": result.macd.signal,
+                        "RSI": result.rsi.rsi,
+                        "RSI_Zone": result.rsi.assessment,
+                        "BB_Pos": result.bollinger.position,
+                    }
+                )
+        if use_json:
+            json_output(rows)
+        else:
+            tsv_output(
+                rows,
+                columns=[
+                    "Symbol",
+                    "Close",
+                    "Trend",
+                    "MACD",
+                    "RSI",
+                    "RSI_Zone",
+                    "BB_Pos",
+                ],
             )
-            if verbose and ma.explanation:
-                output["MA_Explain"] = ma.explanation
-            output.update(
-                {
-                    "MACD": result.macd.macd_line,
-                    "Signal": result.macd.signal_line,
-                    "Histogram": result.macd.histogram,
-                    "MACD_Signal": result.macd.signal,
-                }
-            )
-            if verbose and result.macd.explanation:
-                output["MACD_Explain"] = result.macd.explanation
-            output.update(
-                {
-                    "RSI": result.rsi.rsi,
-                    "RSI_Assessment": result.rsi.assessment,
-                }
-            )
-            if verbose and result.rsi.explanation:
-                output["RSI_Explain"] = result.rsi.explanation
-            bb = result.bollinger
-            output.update(
-                {
-                    "BB_Upper": bb.upper,
-                    "BB_Middle": bb.middle,
-                    "BB_Lower": bb.lower,
-                    "BB_Bandwidth%": bb.bandwidth_pct,
-                    "BB_Position": bb.position,
-                }
-            )
-            if verbose and bb.explanation:
-                output["BB_Explain"] = bb.explanation
-        kv_output(output)
 
 
 @app.command()
