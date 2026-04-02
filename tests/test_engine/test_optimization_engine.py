@@ -57,12 +57,13 @@ class TestOptimizePortfolio:
         weights = optimize_portfolio(prices, method="max_sharpe")
         assert abs(sum(weights.values()) - 1.0) < 0.01
 
-    def test_unknown_method_falls_back(self):
-        """Unknown method falls back to equal weight via the except clause."""
+    def test_unknown_method_raises(self):
+        """Unknown method should raise ValueError, not silently fall back."""
+        import pytest
+
         prices = _make_prices()
-        weights = optimize_portfolio(prices, method="unknown_magic")
-        # Falls back to equal_weight
-        assert len(weights) == 3
+        with pytest.raises(ValueError, match="Unknown method"):
+            optimize_portfolio(prices, method="unknown_magic")
 
     def test_insufficient_data_falls_back(self):
         """Too few rows falls back to equal weight."""

@@ -38,6 +38,13 @@ def optimize_portfolio(
     if method == "equal_weight":
         return equal_weight(symbols)
 
+    valid_methods = {"risk_parity", "min_volatility", "max_sharpe"}
+    if method not in valid_methods:
+        raise ValueError(
+            f"Unknown method: {method}. "
+            f"Use 'equal_weight', {', '.join(sorted(valid_methods))}."
+        )
+
     if prices_df.empty or len(prices_df) < 5:
         return equal_weight(symbols)
 
@@ -46,13 +53,8 @@ def optimize_portfolio(
             return _hrp(prices_df)
         elif method == "min_volatility":
             return _min_volatility(prices_df)
-        elif method == "max_sharpe":
-            return _max_sharpe(prices_df, risk_free_rate)
         else:
-            raise ValueError(
-                f"Unknown method: {method}. "
-                "Use 'equal_weight', 'risk_parity', 'min_volatility', or 'max_sharpe'."
-            )
+            return _max_sharpe(prices_df, risk_free_rate)
     except (OptimizationError, ValueError, np.linalg.LinAlgError):
         return equal_weight(symbols)
 

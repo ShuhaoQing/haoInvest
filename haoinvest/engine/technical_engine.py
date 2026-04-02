@@ -183,9 +183,9 @@ def compute_technical(
     if len(df) >= 26:
         macd_df = df.ta.macd(fast=12, slow=26, signal=9)
         if macd_df is not None and not macd_df.empty:
-            macd_line = safe_float(macd_df.iloc[-1, 0])  # MACD_12_26_9
-            histogram = safe_float(macd_df.iloc[-1, 1])  # MACDh_12_26_9
-            signal_line = safe_float(macd_df.iloc[-1, 2])  # MACDs_12_26_9
+            macd_line = safe_float(macd_df["MACD_12_26_9"].iloc[-1])
+            histogram = safe_float(macd_df["MACDh_12_26_9"].iloc[-1])
+            signal_line = safe_float(macd_df["MACDs_12_26_9"].iloc[-1])
 
     macd_signal, macd_explanation = _assess_macd(histogram, verbose)
 
@@ -220,9 +220,9 @@ def compute_technical(
     if len(df) >= 20:
         bb_df = df.ta.bbands(length=20, std=2)
         if bb_df is not None and not bb_df.empty:
-            bb_lower = safe_float(bb_df.iloc[-1, 0])  # BBL_20_2.0
-            bb_middle = safe_float(bb_df.iloc[-1, 1])  # BBM_20_2.0
-            bb_upper = safe_float(bb_df.iloc[-1, 2])  # BBU_20_2.0
+            bb_lower = safe_float(bb_df["BBL_20_2.0"].iloc[-1])
+            bb_middle = safe_float(bb_df["BBM_20_2.0"].iloc[-1])
+            bb_upper = safe_float(bb_df["BBU_20_2.0"].iloc[-1])
 
     bandwidth_pct, bb_position, bb_explanation = _assess_bollinger(
         latest_close, bb_upper, bb_middle, bb_lower, verbose

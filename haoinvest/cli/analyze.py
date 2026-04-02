@@ -90,7 +90,7 @@ def risk(
     ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
-    """Risk metrics — volatility, drawdown, Sharpe ratio."""
+    """Risk metrics — volatility, drawdown, Sharpe ratio, Sortino ratio."""
     db = _init_db()
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)

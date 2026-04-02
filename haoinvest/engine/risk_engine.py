@@ -39,7 +39,10 @@ def compute_correlation_matrix(
 ) -> dict[str, dict[str, float]]:
     """Pearson correlation matrix from multi-column returns DataFrame."""
     corr = returns_df.corr()
-    return {
-        col: {row: round(corr.loc[row, col], 4) for row in corr.index}
-        for col in corr.columns
-    }
+    result: dict[str, dict[str, float]] = {}
+    for col in corr.columns:
+        result[col] = {}
+        for row in corr.index:
+            val = safe_float(corr.loc[row, col])
+            result[col][row] = round(val, 4) if val is not None else 0.0
+    return result
