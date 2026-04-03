@@ -9,7 +9,7 @@ Built for a beginner investor in China covering A-shares, US stocks, HK stocks, 
 ## Features
 
 - **Portfolio Management** — Record trades, track positions, calculate time-weighted returns (TWR)
-- **Market Data** — Real-time quotes from AKShare (A-shares), Yahoo Finance (US/HK), Crypto.com (crypto)
+- **Market Data** — Real-time quotes from Sina/Tencent/eastmoney APIs (A-shares), Yahoo Finance (US/HK), Crypto.com (crypto)
 - **Fundamental Analysis** — PE/PB/ROE valuation assessment with financial health scoring; batch support for multi-symbol comparison
 - **Peer Comparison** — Find and compare same-sector stocks by valuation and performance
 - **Sector Browsing** — Browse A-share industry sectors and their constituent stocks
@@ -108,7 +108,7 @@ Use the unified `/haoinvest` skill in Claude Code for natural language interacti
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
 | `HAOINVEST_DATA_DIR` | `~/.haoinvest/` | Data directory path |
-| `HAOINVEST_AKSHARE_TIMEOUT` | `30` | AKShare API timeout (seconds) |
+| `HAOINVEST_API_TIMEOUT` | `30` | A-share API timeout (seconds) |
 | `HAOINVEST_CACHE_TTL` | `14400` | Analysis cache TTL (seconds) |
 | `HAOINVEST_PRICE_CACHE_TTL` | `3600` | Price cache TTL (seconds) |
 
@@ -134,7 +134,7 @@ pytest tests/test_fx.py          # Single module
 │  pandas-ta · QuantStats · PyPfOpt  │
 ├─────────────────────────────────────┤
 │  Data (market/, portfolio/, db.py)  │  ← Providers, positions, SQLite
-│  AKShare · yfinance · Crypto.com   │
+│  Sina/Tencent/EM · yfinance · Crypto│
 └─────────────────────────────────────┘
 ```
 

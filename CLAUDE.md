@@ -10,7 +10,7 @@ Python library + Claude Code skills for tracking portfolios, analyzing stocks, a
 - **Language**: Python 3.11+
 - **Package Manager**: uv (NOT pip)
 - **Database**: SQLite (~/.haoinvest/haoinvest.db)
-- **Data Sources**: AKShare (A-shares), yfinance (US/HK), Crypto.com MCP (crypto)
+- **Data Sources**: Sina/Tencent/eastmoney direct APIs (A-shares), yfinance (US/HK), Crypto.com MCP (crypto)
 - **Testing**: pytest
 
 ## Quick Commands
@@ -55,7 +55,7 @@ haoinvest/
 │   ├── report.py      # Full stock report with buy-readiness checklist
 │   ├── signals.py     # Aggregate buy/sell signals
 │   └── volume.py      # Volume analysis
-├── market/            # Provider registry — akshare, yfinance, crypto MCP
+├── market/            # Provider registry — A-share (Sina/Tencent/eastmoney), yfinance, crypto MCP
 └── strategy/          # Optimizer adapter + rebalance logic
 ```
 

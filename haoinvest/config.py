@@ -16,9 +16,8 @@ def get_db_path() -> Path:
     return get_data_dir() / "haoinvest.db"
 
 
-# AKShare has unstable APIs — pin version in pyproject.toml
-# and handle errors gracefully in providers.
-AKSHARE_TIMEOUT = int(os.environ.get("HAOINVEST_AKSHARE_TIMEOUT", "30"))
+# API timeout for A-share data sources (Sina/Tencent/eastmoney)
+API_TIMEOUT = int(os.environ.get("HAOINVEST_API_TIMEOUT", "30"))
 
 # Cache expiry in seconds
 ANALYSIS_CACHE_TTL = int(
