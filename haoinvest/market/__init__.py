@@ -22,9 +22,9 @@ def get_provider(market_type: MarketType) -> MarketProvider:
 def _auto_register() -> None:
     """Register built-in providers."""
     try:
-        from .akshare_provider import AKShareProvider
+        from .ashare_provider import AShareProvider
 
-        register_provider(MarketType.A_SHARE, AKShareProvider)
+        register_provider(MarketType.A_SHARE, AShareProvider)
     except ImportError:
         pass
 

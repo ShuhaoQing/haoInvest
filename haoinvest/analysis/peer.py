@@ -15,7 +15,7 @@ def find_peers(
 ) -> list[dict]:
     """Find same-sector peers and compare fundamental metrics.
 
-    For A-shares: uses AKShareProvider.get_sector_constituents() to find
+    For A-shares: uses AShareProvider.get_sector_constituents() to find
     stocks in the same industry board, sorted by market cap.
 
     Returns list of dicts suitable for TSV output, with the target stock
@@ -26,7 +26,7 @@ def find_peers(
             {"message": f"Peer comparison not yet supported for {market_type.value}"}
         ]
 
-    from ..market.akshare_provider import AKShareProvider
+    from ..market.ashare_provider import AShareProvider
 
     # Get target stock info to determine sector
     target = analyze_stock(symbol, market_type)
@@ -36,7 +36,7 @@ def find_peers(
 
     # Get sector constituents
     try:
-        constituents = AKShareProvider.get_sector_constituents(sector)
+        constituents = AShareProvider.get_sector_constituents(sector)
     except Exception as e:
         logger.debug("Failed to get sector constituents for %s: %s", sector, e)
         return [{"message": f"Failed to get sector data for {sector}: {e}"}]

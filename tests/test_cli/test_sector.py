@@ -52,7 +52,7 @@ MOCK_SECTOR_CONSTITUENTS = [
 class TestSectorList:
     def test_sector_list_tsv(self):
         with patch(
-            "haoinvest.market.akshare_provider.AKShareProvider.get_sector_list",
+            "haoinvest.market.ashare_provider.AShareProvider.get_sector_list",
             return_value=MOCK_SECTOR_LIST,
         ):
             result = runner.invoke(app, ["market", "sector-list"])
@@ -62,7 +62,7 @@ class TestSectorList:
 
     def test_sector_list_json(self):
         with patch(
-            "haoinvest.market.akshare_provider.AKShareProvider.get_sector_list",
+            "haoinvest.market.ashare_provider.AShareProvider.get_sector_list",
             return_value=MOCK_SECTOR_LIST,
         ):
             result = runner.invoke(app, ["market", "sector-list", "--json"])
@@ -71,7 +71,7 @@ class TestSectorList:
 
     def test_sector_list_error(self):
         with patch(
-            "haoinvest.market.akshare_provider.AKShareProvider.get_sector_list",
+            "haoinvest.market.ashare_provider.AShareProvider.get_sector_list",
             side_effect=RuntimeError("API failed"),
         ):
             result = runner.invoke(app, ["market", "sector-list"])
@@ -81,7 +81,7 @@ class TestSectorList:
 class TestSector:
     def test_sector_constituents_tsv(self):
         with patch(
-            "haoinvest.market.akshare_provider.AKShareProvider.get_sector_constituents",
+            "haoinvest.market.ashare_provider.AShareProvider.get_sector_constituents",
             return_value=MOCK_SECTOR_CONSTITUENTS,
         ):
             result = runner.invoke(app, ["market", "sector", "白酒"])
@@ -92,7 +92,7 @@ class TestSector:
 
     def test_sector_constituents_json(self):
         with patch(
-            "haoinvest.market.akshare_provider.AKShareProvider.get_sector_constituents",
+            "haoinvest.market.ashare_provider.AShareProvider.get_sector_constituents",
             return_value=MOCK_SECTOR_CONSTITUENTS,
         ):
             result = runner.invoke(app, ["market", "sector", "白酒", "--json"])
@@ -101,7 +101,7 @@ class TestSector:
 
     def test_sector_not_found(self):
         with patch(
-            "haoinvest.market.akshare_provider.AKShareProvider.get_sector_constituents",
+            "haoinvest.market.ashare_provider.AShareProvider.get_sector_constituents",
             side_effect=RuntimeError("Sector not found"),
         ):
             result = runner.invoke(app, ["market", "sector", "不存在的板块"])

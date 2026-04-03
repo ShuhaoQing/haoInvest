@@ -3,82 +3,104 @@
 from datetime import date
 from unittest.mock import patch, MagicMock
 
-import pandas as pd
 import pytest
 
-from haoinvest.market.akshare_provider import AKShareProvider
+from haoinvest.market.ashare_provider import AShareProvider
 from haoinvest.market.crypto_provider import (
     CryptoProvider,
     _normalize_symbol,
     _to_coingecko_id,
 )
+from haoinvest.models import BasicInfo, MarketType, PriceBar
 
 
-class TestAKShareProviderContract:
-    """Test AKShareProvider with mocked AKShare responses."""
+class TestAShareProviderContract:
+    """Test AShareProvider with mocked source modules."""
 
-    def test_get_current_price(self):
-        mock_df = pd.DataFrame(
-            {
-                "代码": ["600519", "000001"],
-                "最新价": [1680.0, 12.5],
-            }
+    @patch("haoinvest.market.ashare_provider.sina.get_current_price")
+    def test_get_current_price(self, mock_sina_price):
+        mock_sina_price.return_value = 1680.0
+        provider = AShareProvider()
+        price = provider.get_current_price("600519")
+        assert price == 1680.0
+        mock_sina_price.assert_called_once_with("600519")
+
+    @patch("haoinvest.market.ashare_provider.tencent.get_current_price")
+    @patch("haoinvest.market.ashare_provider.sina.get_current_price")
+    def test_get_current_price_fallback_to_tencent(self, mock_sina, mock_tencent):
+        mock_sina.side_effect = RuntimeError("Sina unavailable")
+        mock_tencent.return_value = 1679.0
+        provider = AShareProvider()
+        price = provider.get_current_price("600519")
+        assert price == 1679.0
+
+    @patch("haoinvest.market.ashare_provider.sina.get_current_price")
+    def test_get_current_price_not_found(self, mock_sina_price):
+        mock_sina_price.side_effect = ValueError(
+            "Symbol 999999 not found in A-share market"
         )
-        mock_ak = MagicMock()
-        mock_ak.stock_zh_a_spot_em.return_value = mock_df
-        with patch.dict("sys.modules", {"akshare": mock_ak}):
-            provider = AKShareProvider()
-            price = provider.get_current_price("600519")
-            assert price == 1680.0
+        provider = AShareProvider()
+        with pytest.raises(ValueError, match="not found"):
+            provider.get_current_price("999999")
 
-    def test_get_current_price_not_found(self):
-        mock_df = pd.DataFrame({"代码": ["000001"], "最新价": [12.5]})
-        mock_ak = MagicMock()
-        mock_ak.stock_zh_a_spot_em.return_value = mock_df
-        with patch.dict("sys.modules", {"akshare": mock_ak}):
-            provider = AKShareProvider()
-            with pytest.raises(ValueError, match="not found"):
-                provider.get_current_price("999999")
-
-    def test_get_price_history(self):
-        mock_df = pd.DataFrame(
-            {
-                "日期": ["2026-03-25", "2026-03-26", "2026-03-27"],
-                "开盘": [1670.0, 1675.0, 1680.0],
-                "最高": [1685.0, 1690.0, 1695.0],
-                "最低": [1665.0, 1670.0, 1675.0],
-                "收盘": [1680.0, 1685.0, 1690.0],
-                "成交量": [10000, 12000, 11000],
-            }
+    @patch("haoinvest.market.ashare_provider.tencent.get_price_history")
+    def test_get_price_history(self, mock_tencent_history):
+        mock_tencent_history.return_value = [
+            PriceBar(
+                symbol="600519",
+                market_type=MarketType.A_SHARE,
+                trade_date=date(2026, 3, 25),
+                open=1670.0,
+                high=1685.0,
+                low=1665.0,
+                close=1680.0,
+                volume=10000,
+            ),
+            PriceBar(
+                symbol="600519",
+                market_type=MarketType.A_SHARE,
+                trade_date=date(2026, 3, 26),
+                open=1675.0,
+                high=1690.0,
+                low=1670.0,
+                close=1685.0,
+                volume=12000,
+            ),
+        ]
+        provider = AShareProvider()
+        bars = provider.get_price_history(
+            "600519", date(2026, 3, 25), date(2026, 3, 27)
         )
-        mock_ak = MagicMock()
-        mock_ak.stock_zh_a_hist.return_value = mock_df
-        with patch.dict("sys.modules", {"akshare": mock_ak}):
-            provider = AKShareProvider()
-            bars = provider.get_price_history(
-                "600519", date(2026, 3, 25), date(2026, 3, 27)
-            )
-            assert len(bars) == 3
-            assert bars[0].close == 1680.0
-            assert bars[0].trade_date == date(2026, 3, 25)
+        assert len(bars) == 2
+        assert bars[0].close == 1680.0
+        assert bars[0].trade_date == date(2026, 3, 25)
 
-    def test_get_basic_info(self):
-        mock_df = pd.DataFrame(
-            {
-                "item": ["股票简称", "行业", "总市值", "市盈率(动态)", "市净率"],
-                "value": ["贵州茅台", "白酒", "2100000000000", "30.5", "10.2"],
-            }
+    @patch("haoinvest.market.ashare_provider.eastmoney.get_financial_indicators")
+    @patch("haoinvest.market.ashare_provider.tencent.get_valuation")
+    @patch("haoinvest.market.ashare_provider.eastmoney.get_basic_info")
+    def test_get_basic_info(self, mock_em_info, mock_tencent_val, mock_em_fin):
+        mock_em_info.return_value = BasicInfo(
+            name="贵州茅台",
+            sector="白酒",
+            currency="CNY",
+            market_type="a_share",
         )
-        mock_ak = MagicMock()
-        mock_ak.stock_individual_info_em.return_value = mock_df
-        with patch.dict("sys.modules", {"akshare": mock_ak}):
-            provider = AKShareProvider()
-            info = provider.get_basic_info("600519")
-            assert info.name == "贵州茅台"
-            assert info.currency == "CNY"
-            assert info.pe_ratio == 30.5
-            assert info.pb_ratio == 10.2
-            assert info.total_market_cap == 2100000000000
+        mock_tencent_val.return_value = {
+            "pe_ratio": 30.5,
+            "pb_ratio": 10.2,
+            "total_market_cap": 2100000000000,
+        }
+        mock_em_fin.return_value = {"roe": 24.64, "gross_margin": 91.29}
+
+        provider = AShareProvider()
+        info = provider.get_basic_info("600519")
+        assert info.name == "贵州茅台"
+        assert info.currency == "CNY"
+        assert info.pe_ratio == 30.5
+        assert info.pb_ratio == 10.2
+        assert info.total_market_cap == 2100000000000
+        assert info.roe == 24.64
+        assert info.gross_margin == 91.29
 
 
 class TestCryptoProviderHelpers:
