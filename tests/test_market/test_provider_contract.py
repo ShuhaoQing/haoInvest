@@ -36,7 +36,9 @@ class TestAShareProviderContract:
 
     @patch("haoinvest.market.ashare_provider.sina.get_current_price")
     def test_get_current_price_not_found(self, mock_sina_price):
-        mock_sina_price.side_effect = ValueError("Symbol 999999 not found in A-share market")
+        mock_sina_price.side_effect = ValueError(
+            "Symbol 999999 not found in A-share market"
+        )
         provider = AShareProvider()
         with pytest.raises(ValueError, match="not found"):
             provider.get_current_price("999999")
@@ -66,7 +68,9 @@ class TestAShareProviderContract:
             ),
         ]
         provider = AShareProvider()
-        bars = provider.get_price_history("600519", date(2026, 3, 25), date(2026, 3, 27))
+        bars = provider.get_price_history(
+            "600519", date(2026, 3, 25), date(2026, 3, 27)
+        )
         assert len(bars) == 2
         assert bars[0].close == 1680.0
         assert bars[0].trade_date == date(2026, 3, 25)

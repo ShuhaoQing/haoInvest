@@ -10,7 +10,7 @@ import re
 
 import requests
 
-from ._common import market_prefix, parse_float, parse_int
+from ._common import market_prefix, parse_float
 
 
 def get_current_price(symbol: str) -> float:

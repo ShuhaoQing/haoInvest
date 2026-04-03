@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from haoinvest.market.sources.eastmoney import get_financial_indicators
+from haoinvest.market.sources.eastmoney import get_basic_info, get_financial_indicators
 
 
 class TestGetFinancialIndicators:
@@ -41,7 +41,9 @@ class TestGetFinancialIndicators:
 
         assert result["roe"] == 24.64
         assert result["gross_margin"] == 91.29
-        assert result["profit_margin"] == 49.37  # 64626746712.18 / 130903889634.88 * 100
+        assert (
+            result["profit_margin"] == 49.37
+        )  # 64626746712.18 / 130903889634.88 * 100
         mock_get.assert_called_once()
 
     @patch("haoinvest.market.sources.eastmoney.requests.get")
@@ -87,3 +89,39 @@ class TestGetFinancialIndicators:
         assert result["roe"] == 15.0
         assert result["gross_margin"] == 60.0
         assert "profit_margin" not in result
+
+
+class TestGetBasicInfo:
+    """Test get_basic_info with mocked CompanySurvey API."""
+
+    @patch("haoinvest.market.sources.eastmoney.requests.get")
+    def test_success(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
+            "jbzl": {
+                "agjc": "贵州茅台",
+                "sshy": "白酒",
+            }
+        }
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+
+        info = get_basic_info("600519")
+        assert info.name == "贵州茅台"
+        assert info.sector == "白酒"
+        assert info.currency == "CNY"
+        assert info.market_type == "a_share"
+        # Verify SH prefix used
+        call_params = mock_get.call_args[1]["params"]
+        assert call_params["code"] == "SH600519"
+
+    @patch("haoinvest.market.sources.eastmoney.requests.get")
+    def test_sz_prefix(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"jbzl": {"agjc": "五粮液", "sshy": "白酒"}}
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+
+        get_basic_info("000858")
+        call_params = mock_get.call_args[1]["params"]
+        assert call_params["code"] == "SZ000858"
