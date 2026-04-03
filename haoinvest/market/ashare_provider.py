@@ -34,7 +34,7 @@ def _with_fallback(primary_fn: Callable, fallback_fn: Callable, label: str) -> A
         return fallback_fn()
 
 
-class AKShareProvider(MarketProvider):
+class AShareProvider(MarketProvider):
     """Provider for Chinese A-share market data.
 
     Uses Sina, Tencent, and eastmoney web APIs directly.

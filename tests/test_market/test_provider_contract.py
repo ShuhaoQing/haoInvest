@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from haoinvest.market.akshare_provider import AKShareProvider
+from haoinvest.market.ashare_provider import AShareProvider
 from haoinvest.market.crypto_provider import (
     CryptoProvider,
     _normalize_symbol,
@@ -14,34 +14,34 @@ from haoinvest.market.crypto_provider import (
 from haoinvest.models import BasicInfo, MarketType, PriceBar
 
 
-class TestAKShareProviderContract:
-    """Test AKShareProvider with mocked source modules."""
+class TestAShareProviderContract:
+    """Test AShareProvider with mocked source modules."""
 
-    @patch("haoinvest.market.akshare_provider.sina.get_current_price")
+    @patch("haoinvest.market.ashare_provider.sina.get_current_price")
     def test_get_current_price(self, mock_sina_price):
         mock_sina_price.return_value = 1680.0
-        provider = AKShareProvider()
+        provider = AShareProvider()
         price = provider.get_current_price("600519")
         assert price == 1680.0
         mock_sina_price.assert_called_once_with("600519")
 
-    @patch("haoinvest.market.akshare_provider.tencent.get_current_price")
-    @patch("haoinvest.market.akshare_provider.sina.get_current_price")
+    @patch("haoinvest.market.ashare_provider.tencent.get_current_price")
+    @patch("haoinvest.market.ashare_provider.sina.get_current_price")
     def test_get_current_price_fallback_to_tencent(self, mock_sina, mock_tencent):
         mock_sina.side_effect = RuntimeError("Sina unavailable")
         mock_tencent.return_value = 1679.0
-        provider = AKShareProvider()
+        provider = AShareProvider()
         price = provider.get_current_price("600519")
         assert price == 1679.0
 
-    @patch("haoinvest.market.akshare_provider.sina.get_current_price")
+    @patch("haoinvest.market.ashare_provider.sina.get_current_price")
     def test_get_current_price_not_found(self, mock_sina_price):
         mock_sina_price.side_effect = ValueError("Symbol 999999 not found in A-share market")
-        provider = AKShareProvider()
+        provider = AShareProvider()
         with pytest.raises(ValueError, match="not found"):
             provider.get_current_price("999999")
 
-    @patch("haoinvest.market.akshare_provider.tencent.get_price_history")
+    @patch("haoinvest.market.ashare_provider.tencent.get_price_history")
     def test_get_price_history(self, mock_tencent_history):
         mock_tencent_history.return_value = [
             PriceBar(
@@ -65,15 +65,15 @@ class TestAKShareProviderContract:
                 volume=12000,
             ),
         ]
-        provider = AKShareProvider()
+        provider = AShareProvider()
         bars = provider.get_price_history("600519", date(2026, 3, 25), date(2026, 3, 27))
         assert len(bars) == 2
         assert bars[0].close == 1680.0
         assert bars[0].trade_date == date(2026, 3, 25)
 
-    @patch("haoinvest.market.akshare_provider.eastmoney.get_financial_indicators")
-    @patch("haoinvest.market.akshare_provider.tencent.get_valuation")
-    @patch("haoinvest.market.akshare_provider.eastmoney.get_basic_info")
+    @patch("haoinvest.market.ashare_provider.eastmoney.get_financial_indicators")
+    @patch("haoinvest.market.ashare_provider.tencent.get_valuation")
+    @patch("haoinvest.market.ashare_provider.eastmoney.get_basic_info")
     def test_get_basic_info(self, mock_em_info, mock_tencent_val, mock_em_fin):
         mock_em_info.return_value = BasicInfo(
             name="贵州茅台",
@@ -88,7 +88,7 @@ class TestAKShareProviderContract:
         }
         mock_em_fin.return_value = {"roe": 24.64, "gross_margin": 91.29}
 
-        provider = AKShareProvider()
+        provider = AShareProvider()
         info = provider.get_basic_info("600519")
         assert info.name == "贵州茅台"
         assert info.currency == "CNY"

@@ -56,7 +56,7 @@ class TestFindPeers:
                 "haoinvest.analysis.peer.analyze_stock", return_value=MOCK_FUNDAMENTAL
             ),
             patch(
-                "haoinvest.market.akshare_provider.AKShareProvider.get_sector_constituents",
+                "haoinvest.market.ashare_provider.AShareProvider.get_sector_constituents",
                 return_value=MOCK_CONSTITUENTS,
             ),
         ):
@@ -85,7 +85,7 @@ class TestFindPeers:
                 "haoinvest.analysis.peer.analyze_stock", return_value=MOCK_FUNDAMENTAL
             ),
             patch(
-                "haoinvest.market.akshare_provider.AKShareProvider.get_sector_constituents",
+                "haoinvest.market.ashare_provider.AShareProvider.get_sector_constituents",
                 return_value=MOCK_CONSTITUENTS,
             ),
         ):
@@ -100,7 +100,7 @@ class TestPeerCLI:
                 "haoinvest.analysis.peer.analyze_stock", return_value=MOCK_FUNDAMENTAL
             ),
             patch(
-                "haoinvest.market.akshare_provider.AKShareProvider.get_sector_constituents",
+                "haoinvest.market.ashare_provider.AShareProvider.get_sector_constituents",
                 return_value=MOCK_CONSTITUENTS,
             ),
         ):
@@ -115,7 +115,7 @@ class TestPeerCLI:
                 "haoinvest.analysis.peer.analyze_stock", return_value=MOCK_FUNDAMENTAL
             ),
             patch(
-                "haoinvest.market.akshare_provider.AKShareProvider.get_sector_constituents",
+                "haoinvest.market.ashare_provider.AShareProvider.get_sector_constituents",
                 return_value=MOCK_CONSTITUENTS,
             ),
         ):

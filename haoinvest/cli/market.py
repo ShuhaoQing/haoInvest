@@ -139,10 +139,10 @@ def sector_list(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """行业板块排行 — list all A-share industry sectors with performance."""
-    from ..market.akshare_provider import AKShareProvider
+    from ..market.ashare_provider import AShareProvider
 
     try:
-        rows = AKShareProvider.get_sector_list()
+        rows = AShareProvider.get_sector_list()
     except Exception as e:
         error_output(str(e))
         raise typer.Exit(1)
@@ -169,10 +169,10 @@ def sector(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """行业板块成分股 — show constituents of a specific A-share sector."""
-    from ..market.akshare_provider import AKShareProvider
+    from ..market.ashare_provider import AShareProvider
 
     try:
-        rows = AKShareProvider.get_sector_constituents(name)
+        rows = AShareProvider.get_sector_constituents(name)
     except Exception as e:
         error_output(str(e))
         raise typer.Exit(1)
