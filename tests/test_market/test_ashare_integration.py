@@ -42,7 +42,8 @@ class TestAShareIntegration:
         assert rows[0]["name"] != ""
 
     def test_sector_constituents(self):
-        rows = sina.get_sector_constituents("白酒")
+        # Sina uses "酿酒行业" (not eastmoney's "白酒")
+        rows = sina.get_sector_constituents("酿酒行业")
         assert len(rows) > 0
         codes = [r["code"] for r in rows]
         assert "600519" in codes

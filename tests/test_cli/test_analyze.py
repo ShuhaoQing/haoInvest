@@ -225,7 +225,7 @@ class TestAnalyzeIntegration:
         result = runner.invoke(app, ["analyze", "fundamental", "600519"])
         assert result.exit_code == 0
         assert "贵州茅台" in result.output
-        assert "Overall:" in result.output
+        assert "Overall_Valuation:" in result.output
 
     @pytest.mark.integration
     def test_fundamental_000001_real(self):
