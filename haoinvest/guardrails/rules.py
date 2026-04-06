@@ -114,7 +114,9 @@ def health_check(
     for pos in positions:
         sector = _get_sector_for_symbol(db, pos.symbol, pos.market_type)
         if sector:
-            sector_values[sector] = sector_values.get(sector, 0) + position_values[pos.symbol]
+            sector_values[sector] = (
+                sector_values.get(sector, 0) + position_values[pos.symbol]
+            )
             sector_symbols.setdefault(sector, []).append(pos.symbol)
 
     for sector, value in sector_values.items():

@@ -15,7 +15,7 @@ from ..models import (
 )
 from .alerts import get_recent_price_change, scan_alerts
 from .emotion import get_emotion_trade_stats_with_prices
-from .rules import load_config, validate_trade
+from .rules import validate_trade
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +161,9 @@ def _build_current_position(
 def _get_thesis(db: Database, symbol: str) -> str | None:
     """Get the original buy thesis from journal."""
     entries = db.get_journal_entries(symbol=symbol, limit=50)
-    buy_entries = [e for e in entries if e.decision_type and e.decision_type.value == "buy"]
+    buy_entries = [
+        e for e in entries if e.decision_type and e.decision_type.value == "buy"
+    ]
     if buy_entries:
         return buy_entries[-1].content
     return None

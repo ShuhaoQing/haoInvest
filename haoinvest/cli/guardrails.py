@@ -166,11 +166,15 @@ def pre_trade_data_cmd(
         print()
         if result.current_position:
             cp = result.current_position
-            print(f"当前持仓: {cp.quantity} 股, 均价 {cp.avg_cost}, 浮盈 {cp.unrealized_pnl_pct}%")
+            print(
+                f"当前持仓: {cp.quantity} 股, 均价 {cp.avg_cost}, 浮盈 {cp.unrealized_pnl_pct}%"
+            )
         else:
             print("当前无持仓")
         if result.recent_price_change.one_week_pct is not None:
-            print(f"近期走势: 1周 {result.recent_price_change.one_week_pct:+.1f}%", end="")
+            print(
+                f"近期走势: 1周 {result.recent_price_change.one_week_pct:+.1f}%", end=""
+            )
             if result.recent_price_change.one_month_pct is not None:
                 print(f", 1月 {result.recent_price_change.one_month_pct:+.1f}%")
             else:

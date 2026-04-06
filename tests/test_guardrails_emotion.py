@@ -1,7 +1,5 @@
 """Tests for guardrails emotion stats."""
 
-import pytest
-
 from haoinvest.db import Database
 from haoinvest.guardrails.emotion import (
     get_emotion_trade_stats,
@@ -18,17 +16,30 @@ from haoinvest.models import (
 
 def _add_position(db: Database, symbol: str, qty: float, avg_cost: float) -> None:
     db.upsert_position(
-        Position(symbol=symbol, market_type=MarketType.A_SHARE, cached_quantity=qty, cached_avg_cost=avg_cost)
+        Position(
+            symbol=symbol,
+            market_type=MarketType.A_SHARE,
+            cached_quantity=qty,
+            cached_avg_cost=avg_cost,
+        )
     )
 
 
-def _add_journal(db: Database, content: str, decision: DecisionType, emotion: Emotion, symbols: list[str]) -> None:
-    db.add_journal_entry(JournalEntry(
-        content=content,
-        decision_type=decision,
-        emotion=emotion,
-        related_symbols=symbols,
-    ))
+def _add_journal(
+    db: Database,
+    content: str,
+    decision: DecisionType,
+    emotion: Emotion,
+    symbols: list[str],
+) -> None:
+    db.add_journal_entry(
+        JournalEntry(
+            content=content,
+            decision_type=decision,
+            emotion=emotion,
+            related_symbols=symbols,
+        )
+    )
 
 
 class TestEmotionTradeStats:

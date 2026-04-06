@@ -524,9 +524,7 @@ class GuardrailsConfig(BaseModel):
     max_sector_pct: float = Field(
         default=35.0, description="Max % of portfolio in a single sector"
     )
-    max_total_positions: int = Field(
-        default=8, description="Max number of positions"
-    )
+    max_total_positions: int = Field(default=8, description="Max number of positions")
     min_cash_reserve_pct: float = Field(
         default=10.0, description="Min cash reserve as % of total portfolio"
     )

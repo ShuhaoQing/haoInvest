@@ -1,19 +1,25 @@
 """Tests for guardrails rules engine."""
 
-from datetime import datetime
 from unittest.mock import patch
 
-import pytest
 
 from haoinvest.db import Database
 from haoinvest.guardrails.rules import health_check, load_config, validate_trade
-from haoinvest.models import MarketType, Position, Severity
+from haoinvest.models import MarketType, Position
 
 
-def _add_position(db: Database, symbol: str, qty: float, avg_cost: float, mt: MarketType = MarketType.A_SHARE) -> None:
+def _add_position(
+    db: Database,
+    symbol: str,
+    qty: float,
+    avg_cost: float,
+    mt: MarketType = MarketType.A_SHARE,
+) -> None:
     """Helper to insert a position directly."""
     db.upsert_position(
-        Position(symbol=symbol, market_type=mt, cached_quantity=qty, cached_avg_cost=avg_cost)
+        Position(
+            symbol=symbol, market_type=mt, cached_quantity=qty, cached_avg_cost=avg_cost
+        )
     )
 
 
@@ -65,7 +71,9 @@ class TestHealthCheck:
 
     @patch("haoinvest.guardrails.rules._get_sector_for_symbol")
     def test_sector_concentration(self, mock_sector, db: Database) -> None:
-        mock_sector.side_effect = lambda _db, sym, _mt: "白酒" if sym.startswith("6") else "银行"
+        mock_sector.side_effect = lambda _db, sym, _mt: (
+            "白酒" if sym.startswith("6") else "银行"
+        )
         _add_position(db, "600519", 100, 1000)
         _add_position(db, "600809", 100, 500)
         _add_position(db, "000001", 100, 200)

@@ -1,9 +1,8 @@
 """Tests for guardrails pre-trade data aggregation."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from unittest.mock import patch
 
-import pytest
 
 from haoinvest.db import Database
 from haoinvest.guardrails.pre_trade_data import collect_pre_trade_data
@@ -14,14 +13,17 @@ from haoinvest.models import (
     MarketType,
     Position,
     PriceBar,
-    Transaction,
-    TransactionAction,
 )
 
 
 def _add_position(db: Database, symbol: str, qty: float, avg_cost: float) -> None:
     db.upsert_position(
-        Position(symbol=symbol, market_type=MarketType.A_SHARE, cached_quantity=qty, cached_avg_cost=avg_cost)
+        Position(
+            symbol=symbol,
+            market_type=MarketType.A_SHARE,
+            cached_quantity=qty,
+            cached_avg_cost=avg_cost,
+        )
     )
 
 
@@ -32,18 +34,32 @@ class TestCollectPreTradeData:
         _add_position(db, "600519", 100, 1000)
         _add_position(db, "000858", 200, 150)
 
-        db.add_journal_entry(JournalEntry(
-            content="看好茅台长期消费逻辑",
-            decision_type=DecisionType.BUY,
-            emotion=Emotion.RATIONAL,
-            related_symbols=["600519"],
-        ))
+        db.add_journal_entry(
+            JournalEntry(
+                content="看好茅台长期消费逻辑",
+                decision_type=DecisionType.BUY,
+                emotion=Emotion.RATIONAL,
+                related_symbols=["600519"],
+            )
+        )
 
         today = date.today()
-        db.save_prices([
-            PriceBar(symbol="600519", market_type=MarketType.A_SHARE, trade_date=today - timedelta(days=10), close=1000),
-            PriceBar(symbol="600519", market_type=MarketType.A_SHARE, trade_date=today, close=1100),
-        ])
+        db.save_prices(
+            [
+                PriceBar(
+                    symbol="600519",
+                    market_type=MarketType.A_SHARE,
+                    trade_date=today - timedelta(days=10),
+                    close=1000,
+                ),
+                PriceBar(
+                    symbol="600519",
+                    market_type=MarketType.A_SHARE,
+                    trade_date=today,
+                    close=1100,
+                ),
+            ]
+        )
 
         prices = {
             ("600519", MarketType.A_SHARE): 1100.0,

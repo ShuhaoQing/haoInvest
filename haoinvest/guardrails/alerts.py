@@ -135,7 +135,9 @@ def get_recent_price_change(
     month_ago = today - timedelta(days=30)
     month_bar = _find_closest_bar(bars, month_ago)
     if month_bar and month_bar.close and abs(month_bar.close) > ZERO_THRESHOLD:
-        one_month_pct = round((latest_close - month_bar.close) / month_bar.close * 100, 1)
+        one_month_pct = round(
+            (latest_close - month_bar.close) / month_bar.close * 100, 1
+        )
 
     return RecentPriceChange(one_week_pct=one_week_pct, one_month_pct=one_month_pct)
 
@@ -150,7 +152,9 @@ def _get_original_thesis(db: Database, symbol: str) -> str | None:
     """Find the original buy thesis from journal entries."""
     entries = db.get_journal_entries(symbol=symbol, limit=50)
     # Look for the earliest BUY decision entry
-    buy_entries = [e for e in entries if e.decision_type and e.decision_type.value == "buy"]
+    buy_entries = [
+        e for e in entries if e.decision_type and e.decision_type.value == "buy"
+    ]
     if buy_entries:
         # entries are ordered DESC, so last is earliest
         return buy_entries[-1].content
