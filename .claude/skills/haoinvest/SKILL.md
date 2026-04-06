@@ -47,19 +47,85 @@ All-in-one investment management via CLI + Claude Code agent. CLI does data + co
 5. Run reports on 2-3 candidates from underrepresented sectors
 6. Explain WHY each candidate diversifies the portfolio
 
-### Workflow 3: "我想买 XXX" — Buy decision
+### Workflow 3: "我想买/卖 XXX" — Pre-Trade Review (5维度审查)
 
-1. Run comprehensive report with checklist:
+**触发条件**: 用户表达买入/卖出意图时。
+
+1. Run comprehensive report + guardrails pre-trade data (2 calls):
    ```bash
-   uv run haoinvest analyze report <symbol>
+   uv run haoinvest analyze report <symbol> --json
+   uv run haoinvest guardrails pre-trade-data <symbol> <buy/sell> <qty> -m <type> --json
    ```
-2. Explain the buy-readiness score dimension by dimension
-3. If score is low, explain which dimensions are concerning
-4. Compare with peers:
+   If user hasn't specified quantity, ask first. If price not known, the command auto-fetches.
+
+2. **5维度审查** — interpret each dimension:
+
+   | 维度 | 数据来源 | Go | Caution | Stop |
+   |------|---------|-----|---------|------|
+   | 估值 | report.checklist.recommendation | "建议关注" | "谨慎观望" | "建议回避" |
+   | 仓位 | pre-trade-data.simulated_violations (max_single_position_pct) | 无违规 | 有 warning | 有 critical |
+   | 行业均衡 | pre-trade-data.simulated_violations (max_sector_pct) | 无违规 | 有违规 | — |
+   | 信号 | report.signals.overall_signal | "偏多" | "中性" | "偏空" |
+   | 情绪 | 语言检测 + pre-trade-data | 无风险信号 | 轻微信号 | 强信号 |
+
+3. **综合判定**:
+   - 0-1 个 Caution → **执行 (Go)**: "各维度基本通过，可以考虑执行"
+   - 2-3 个 Caution → **谨慎 (Caution)**: "有几个维度需要注意，建议再想想"
+   - 任何 Stop → **停止 (Stop)**: "建议暂缓，先解决以下问题..."
+
+4. **隐式情绪检测** (见 Workflow 3b)
+
+5. If proceeding, suggest recording journal:
    ```bash
-   uv run haoinvest analyze peer <symbol>
+   uv run haoinvest journal add "<决策理由>" --decision buy --emotion <detected> --symbols <symbol>
    ```
-5. Always remind: **这不是投资建议，最终决定需要你自己判断**
+
+6. Always remind: **这不是投资建议，最终决定需要你自己判断**
+
+### Workflow 3b: 隐式情绪检测 (每次交易讨论时自动执行)
+
+**不要直接问用户"你现在什么情绪"** — 人在情绪中往往察觉不到。
+
+**语言信号检测**:
+| 情绪 | 关键词/模式 |
+|------|-----------|
+| FOMO | "赶紧买"、"不能再等了"、"错过就没了"、"别人都买了"、"马上" |
+| GREEDY | "全仓冲"、"必涨"、"加杠杆"、"all in"、"翻倍" |
+| FEARFUL | "撑不住了"、"割了吧"、"快跑"、"受不了了"、"止损" |
+
+**数据信号检测** (from pre-trade-data):
+- `recent_price_change.one_month_pct > 20%` + 买入意图 → 可能追涨
+- `recent_price_change.one_month_pct < -15%` + 卖出意图 → 可能杀跌
+- `current_alerts` 中有 `rapid_change` → 加强警惕
+- `emotion_stats` 中该情绪的 `profitable_pct < 40%` → 历史表现不佳
+
+**检测到风险信号时**:
+- 温和提醒（不指责）："注意，这只股票最近一个月涨了28%。现在买入可能受到追涨情绪影响。"
+- 引用历史数据："过去5次类似情况下的交易，只有20%盈利。"
+- 建议："考虑等待24小时冷静后再决策。或者先做一下基本面分析，看看当前价格是否合理。"
+
+**Journal 记录时建议情绪标签**: 根据检测到的信号建议标签，让用户确认或修正。
+
+### Workflow 3c: 止盈/止损建议 (alerts 触发时)
+
+当 `hao guardrails alerts --json` 返回报警时:
+
+**gain_review 触发 (浮盈超过阈值)**:
+1. 提醒："你持有的 XXX 浮盈已达 Y%，超过了 Z% 的审查阈值。"
+2. 回顾原始 thesis: "你当初买入的理由是：{original_thesis}"
+3. 引导思考:
+   - thesis 是否仍然成立？公司基本面有变化吗？
+   - 当前估值还合理吗？运行 `analyze report` 看看
+   - 如果 thesis 不变且估值合理 → 可继续持有
+   - 如果估值已偏高 → 建议考虑分批止盈（卖出 20-30% 锁定利润）
+
+**loss_review 触发 (浮亏超过阈值)**:
+1. 提醒："你持有的 XXX 浮亏已达 Y%。"
+2. 回顾原始 thesis
+3. 引导思考:
+   - thesis 是否已被打破？（行业变化、公司暴雷、逻辑失效）
+   - 如果 thesis 打破 → 建议果断止损，"不要让沉没成本影响判断"
+   - 如果 thesis 未变，仅市场波动 → 建议耐心持有，考虑是否低位加仓
 
 ### Workflow 4: "对比 A 和 B" — Compare stocks
 
@@ -143,6 +209,15 @@ uv run haoinvest journal add "<content>" [--decision buy|sell|hold|watch|reflect
 uv run haoinvest journal list [--symbol <sym>] [--limit <n>]
 uv run haoinvest journal review [--entry-id <id>] [--days <n>]
 ```
+
+### Guardrails
+```bash
+uv run haoinvest guardrails health-check [--cash <amt>] [--json]   # Check portfolio against rules
+uv run haoinvest guardrails alerts [--json]                        # Scan all positions for threshold violations
+uv run haoinvest guardrails config [--set KEY=VALUE] [--json]      # View/set guardrail configuration
+uv run haoinvest guardrails pre-trade-data <sym> <buy/sell> <qty> [-m <type>] [--price] [--cash] [--json]  # Agent pre-trade data (aggregated)
+```
+Default rules (configurable): single position ≤15%, sector ≤35%, max 8 positions, cash reserve ≥10%, gain review +30%, loss review -10%, rapid change ±10%/week.
 
 ## Market Type Auto-Detection
 

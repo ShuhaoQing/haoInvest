@@ -99,6 +99,27 @@ def add_trade(
     )
 
     db = _init_db()
+
+    # Advisory guardrail check before trade
+    try:
+        from ..guardrails.rules import validate_trade as _validate
+
+        _prices: dict[tuple[str, MarketType], float] = {}
+        for pos in db.get_positions(include_zero=False):
+            try:
+                _provider = get_provider(pos.market_type)
+                _prices[(pos.symbol, pos.market_type)] = _provider.get_current_price(
+                    pos.symbol
+                )
+            except Exception:
+                pass
+        _prices[(symbol, mt)] = price
+        _violations = _validate(db, symbol, mt, action, quantity, price, _prices)
+        for _v in _violations:
+            print(f"  ⚠ {_v.message}", file=__import__("sys").stderr)
+    except Exception:
+        pass  # guardrails are advisory, never block
+
     pm = PortfolioManager(db)
     txn_id = pm.add_trade(txn)
 

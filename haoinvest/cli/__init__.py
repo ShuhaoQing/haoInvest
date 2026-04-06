@@ -2,7 +2,7 @@
 
 import typer
 
-from . import analyze, journal, market, portfolio, strategy
+from . import analyze, guardrails, journal, market, portfolio, strategy
 
 app = typer.Typer(
     name="haoinvest",
@@ -15,3 +15,4 @@ app.add_typer(portfolio.app, name="portfolio")
 app.add_typer(analyze.app, name="analyze")
 app.add_typer(strategy.app, name="strategy")
 app.add_typer(journal.app, name="journal")
+app.add_typer(guardrails.app, name="guardrails")
