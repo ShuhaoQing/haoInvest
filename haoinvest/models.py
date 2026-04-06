@@ -497,5 +497,132 @@ class RebalanceTrade(BaseModel):
     note: Optional[str] = None
 
 
+# --- Guardrails models ---
+
+
+class Severity(str, Enum):
+    """Severity level for guardrail rule violations."""
+
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+class AlertType(str, Enum):
+    """Types of position threshold alerts."""
+
+    GAIN_REVIEW = "gain_review"
+    LOSS_REVIEW = "loss_review"
+    RAPID_CHANGE = "rapid_change"
+
+
+class GuardrailsConfig(BaseModel):
+    """User-configurable investment guardrail rules with conservative defaults."""
+
+    max_single_position_pct: float = Field(
+        default=15.0, description="Max % of portfolio in a single stock"
+    )
+    max_sector_pct: float = Field(
+        default=35.0, description="Max % of portfolio in a single sector"
+    )
+    max_total_positions: int = Field(
+        default=8, description="Max number of positions"
+    )
+    min_cash_reserve_pct: float = Field(
+        default=10.0, description="Min cash reserve as % of total portfolio"
+    )
+    gain_review_threshold: float = Field(
+        default=30.0, description="Review when unrealized gain exceeds +X%"
+    )
+    loss_review_threshold: float = Field(
+        default=-10.0, description="Review when unrealized loss exceeds -X%"
+    )
+    rapid_change_threshold: float = Field(
+        default=10.0, description="Alert on +/-X% change in 1 week"
+    )
+
+
+class RuleViolation(BaseModel):
+    """A single guardrail rule violation."""
+
+    rule_name: str
+    severity: Severity
+    current_value: float
+    limit_value: float
+    message: str
+    affected_symbols: list[str] = Field(default_factory=list)
+
+
+class HealthCheckResult(BaseModel):
+    """Result of portfolio health check against guardrail rules."""
+
+    violations: list[RuleViolation] = Field(default_factory=list)
+    passed: bool = True
+    summary: str = "所有规则通过"
+
+
+class PositionAlert(BaseModel):
+    """An alert triggered by a position exceeding P&L thresholds."""
+
+    symbol: str
+    alert_type: AlertType
+    current_pnl_pct: float
+    threshold_pct: float
+    holding_days: Optional[int] = None
+    original_thesis: Optional[str] = None
+    message: str
+
+
+class RecentPriceChange(BaseModel):
+    """Recent price movement for chasing/panic detection."""
+
+    one_week_pct: Optional[float] = None
+    one_month_pct: Optional[float] = None
+
+
+class EmotionTradeStats(BaseModel):
+    """Historical trade outcome statistics for a specific emotion."""
+
+    emotion: str
+    total_trades: int = 0
+    profitable_pct: float = 0.0
+
+
+class PortfolioContext(BaseModel):
+    """Portfolio-level context for agent decision-making."""
+
+    total_positions: int
+    total_market_value: float
+    sector_allocations: dict[str, float] = Field(default_factory=dict)
+    cash_balance: Optional[float] = None
+
+
+class CurrentPositionInfo(BaseModel):
+    """Current position details for a specific symbol in pre-trade-data."""
+
+    symbol: str
+    quantity: float
+    avg_cost: float
+    market_value: float
+    unrealized_pnl_pct: float
+    allocation_pct: float
+    holding_days: Optional[int] = None
+
+
+class PreTradeData(BaseModel):
+    """Aggregated data for agent pre-trade review — all 5 dimensions in one response."""
+
+    symbol: str
+    action: str
+    quantity: float
+    price: Optional[float] = None
+    simulated_violations: list[RuleViolation] = Field(default_factory=list)
+    portfolio_context: Optional[PortfolioContext] = None
+    current_position: Optional[CurrentPositionInfo] = None
+    current_alerts: list[PositionAlert] = Field(default_factory=list)
+    recent_price_change: RecentPriceChange = Field(default_factory=RecentPriceChange)
+    emotion_stats: dict[str, EmotionTradeStats] = Field(default_factory=dict)
+    original_thesis: Optional[str] = None
+
+
 # Resolve forward references for StockReport
 StockReport.model_rebuild()

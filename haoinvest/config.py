@@ -34,3 +34,17 @@ PRECISION = {
 }
 
 ZERO_THRESHOLD = 1e-10  # Use abs(quantity) < ZERO_THRESHOLD instead of == 0
+
+# Guardrails defaults (conservative for beginners)
+GUARDRAILS_DEFAULTS = {
+    "max_single_position_pct": 15.0,
+    "max_sector_pct": 35.0,
+    "max_total_positions": 8,
+    "min_cash_reserve_pct": 10.0,
+    "gain_review_threshold": 30.0,
+    "loss_review_threshold": -10.0,
+    "rapid_change_threshold": 10.0,
+}
+
+# Sector info cache TTL (7 days — sectors don't change often)
+SECTOR_CACHE_TTL = 7 * 24 * 3600

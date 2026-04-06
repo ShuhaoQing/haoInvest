@@ -110,6 +110,13 @@ CREATE TABLE IF NOT EXISTS analysis_cache (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS guardrails_config (
+    id INTEGER PRIMARY KEY,
+    key TEXT NOT NULL UNIQUE,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -462,3 +469,62 @@ class Database:
             ),
         )
         self.conn.commit()
+
+    # --- Guardrails Config ---
+
+    def get_guardrails_config(self) -> dict[str, str]:
+        """Return all guardrails config as key-value dict."""
+        rows = self.conn.execute("SELECT key, value FROM guardrails_config").fetchall()
+        return {row["key"]: row["value"] for row in rows}
+
+    def set_guardrails_config(self, key: str, value: str) -> None:
+        """Set a guardrails config value (upsert)."""
+        self.conn.execute(
+            """INSERT INTO guardrails_config (key, value, updated_at)
+               VALUES (?, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT(key) DO UPDATE SET
+                 value = excluded.value,
+                 updated_at = CURRENT_TIMESTAMP""",
+            (key, value),
+        )
+        self.conn.commit()
+
+    def get_journal_entries_by_emotion(
+        self,
+        emotion: str,
+        decision_types: list[str] | None = None,
+    ) -> list[JournalEntry]:
+        """Get journal entries filtered by emotion and optionally by decision type."""
+        query = "SELECT * FROM journal_entries WHERE emotion = ?"
+        params: list = [emotion]
+
+        if decision_types:
+            placeholders = ", ".join("?" for _ in decision_types)
+            query += f" AND decision_type IN ({placeholders})"
+            params.extend(decision_types)
+
+        query += " ORDER BY created_at DESC"
+        rows = self.conn.execute(query, params).fetchall()
+
+        entries = []
+        for row in rows:
+            symbols = [
+                r["symbol"]
+                for r in self.conn.execute(
+                    "SELECT symbol FROM journal_symbol_tags WHERE journal_id = ?",
+                    (row["id"],),
+                ).fetchall()
+            ]
+            entries.append(
+                JournalEntry(
+                    id=row["id"],
+                    content=row["content"],
+                    decision_type=row["decision_type"],
+                    emotion=row["emotion"],
+                    related_symbols=symbols,
+                    retrospective=row["retrospective"],
+                    created_at=_parse_datetime(row["created_at"]),
+                    updated_at=_parse_datetime(row["updated_at"]),
+                )
+            )
+        return entries
