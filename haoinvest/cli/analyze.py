@@ -272,7 +272,7 @@ def technical(
     """Technical indicators — MA, MACD, RSI, Bollinger Bands (daily/weekly/monthly)."""
     db = _init_db()
     end_date = date.fromisoformat(end) if end else date.today()
-    start_date = date.fromisoformat(start) if start else end_date - timedelta(days=730)
+    start_date = date.fromisoformat(start) if start else end_date - timedelta(days=1095)
     symbol_list = [s.strip() for s in symbol.split(",")]
 
     if len(symbol_list) == 1:
