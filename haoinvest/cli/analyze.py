@@ -38,6 +38,15 @@ def _ensure_prices_cached(
 
     existing = db.get_prices(symbol, market_type, start, end)
     if len(existing) > 10:
+        # Check if cached data covers the requested start date.
+        # If not, fetch the missing earlier portion.
+        earliest_cached = min(b.trade_date for b in existing)
+        if earliest_cached <= start + timedelta(days=7):
+            return
+        provider = get_provider(market_type)
+        bars = provider.get_price_history(symbol, start, earliest_cached)
+        if bars:
+            db.save_prices(bars)
         return
     provider = get_provider(market_type)
     bars = provider.get_price_history(symbol, start, end)
