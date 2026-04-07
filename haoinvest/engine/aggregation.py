@@ -27,7 +27,10 @@ def _aggregate_bars(
     bars: list[PriceBar],
     group_key: Callable[[date], tuple],
 ) -> list[PriceBar]:
-    """Group sorted daily bars by key and aggregate OHLCV per group."""
+    """Group daily bars by key and aggregate OHLCV per group.
+
+    Sorts input by trade_date first so open/close pick the correct first/last bar.
+    """
     if not bars:
         return []
 
