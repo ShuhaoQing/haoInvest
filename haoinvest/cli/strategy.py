@@ -8,7 +8,6 @@ import typer
 
 from ..analysis.cache import ensure_prices_cached
 from ..market import get_provider
-from ..models import MarketType
 from ..strategy.optimizer import suggest_allocation
 from ..strategy.rebalance import calculate_rebalance
 from ._shared import init_db
