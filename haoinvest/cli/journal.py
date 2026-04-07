@@ -4,18 +4,12 @@ from typing import Optional
 
 import typer
 
-from ..db import Database
 from ..journal import JournalManager
 from ..models import DecisionType, Emotion
+from ._shared import init_db
 from .formatters import error_output, json_output, kv_output, tsv_output
 
 app = typer.Typer(help="Journal — record decisions, review patterns.")
-
-
-def _init_db() -> Database:
-    db = Database()
-    db.init_schema()
-    return db
 
 
 @app.command()
@@ -40,7 +34,7 @@ def add(
     em = Emotion(emotion) if emotion else None
     related = [s.strip() for s in symbols.split(",")] if symbols else []
 
-    db = _init_db()
+    db = init_db()
     jm = JournalManager(db)
     entry_id = jm.create_entry(
         content, decision_type=dt, emotion=em, related_symbols=related
@@ -62,7 +56,7 @@ def list_entries(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """View recent journal entries."""
-    db = _init_db()
+    db = init_db()
     jm = JournalManager(db)
     entries = jm.get_entries(symbol=symbol, limit=limit)
 
@@ -100,7 +94,7 @@ def review(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Get decision stats or retrospective context for AI analysis."""
-    db = _init_db()
+    db = init_db()
     jm = JournalManager(db)
 
     if entry_id is not None:

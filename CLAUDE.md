@@ -35,8 +35,10 @@ haoinvest/
 ├── journal.py         # Investment journal with emotion/decision tagging
 ├── cli/               # Typer CLI — entry point: `uv run haoinvest`
 │   ├── __init__.py    # App + subcommand registration
-│   ├── formatters.py  # Output formatting (text/JSON)
-│   ├── analyze.py     # analyze subcommand
+│   ├── _shared.py     # Shared CLI utilities (init_db, fetch_current_prices)
+│   ├── formatters.py  # Output formatting (text/JSON/section headers)
+│   ├── analyze.py     # analyze subcommand (includes composable `run` command)
+│   ├── guardrails.py  # guardrails subcommand
 │   ├── journal.py     # journal subcommand
 │   ├── market.py      # market subcommand
 │   ├── portfolio.py   # portfolio subcommand
@@ -48,6 +50,8 @@ haoinvest/
 │   └── optimization_engine.py # Portfolio optimization (HRP, min vol, max Sharpe)
 ├── portfolio/         # Trade recording, position tracking, returns (TWR)
 ├── analysis/          # Thin adapters over engine
+│   ├── cache.py       # Price data caching (ensure_prices_cached)
+│   ├── registry.py    # Module registry for composable `analyze run`
 │   ├── fundamental.py # Valuation assessment (PE/PB/ROE), financial health
 │   ├── technical.py   # Technical indicator adapter
 │   ├── risk.py        # Risk metrics adapter

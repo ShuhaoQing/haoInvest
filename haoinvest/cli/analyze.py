@@ -5,53 +5,31 @@ from typing import Optional
 
 import typer
 
+from ..analysis.cache import ensure_prices_cached
 from ..analysis.fundamental import analyze_stock
+from ..analysis.registry import (
+    MODULES,
+    any_needs_prices,
+    max_lookback_days,
+    parse_modules,
+)
 from ..analysis.risk import calculate_risk_metrics, portfolio_correlation
 from ..analysis.signals import aggregate_signals
 from ..analysis.technical import analyze_technical, analyze_technical_multi
 from ..analysis.volume import analyze_volume
-from ..db import Database
 from ..models import MarketType
+from ._shared import init_db
 from .formatters import (
     error_output,
     json_output,
     kv_output,
+    section_header,
     timeframe_section,
     tsv_output,
 )
 from .market import _detect_market_type
 
 app = typer.Typer(help="Analysis — fundamental, risk, technical, volume, signals.")
-
-
-def _init_db() -> Database:
-    db = Database()
-    db.init_schema()
-    return db
-
-
-def _ensure_prices_cached(
-    db: Database, symbol: str, market_type: MarketType, start: date, end: date
-) -> None:
-    """Fetch and cache price history if not already present."""
-    from ..market import get_provider
-
-    existing = db.get_prices(symbol, market_type, start, end)
-    if len(existing) > 10:
-        # Check if cached data covers the requested start date.
-        # If not, fetch the missing earlier portion.
-        earliest_cached = min(b.trade_date for b in existing)
-        if earliest_cached <= start + timedelta(days=7):
-            return
-        provider = get_provider(market_type)
-        bars = provider.get_price_history(symbol, start, earliest_cached)
-        if bars:
-            db.save_prices(bars)
-        return
-    provider = get_provider(market_type)
-    bars = provider.get_price_history(symbol, start, end)
-    if bars:
-        db.save_prices(bars)
 
 
 @app.command()
@@ -178,13 +156,13 @@ def risk(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Risk metrics — volatility, drawdown, Sharpe ratio, Sortino ratio."""
-    db = _init_db()
+    db = init_db()
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
     if symbol:
         mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
-        _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+        ensure_prices_cached(db, symbol, mt, start_date, end_date)
         result = calculate_risk_metrics(db, symbol, mt, start_date, end_date)
         output = {"symbol": symbol, **result.model_dump()}
         if use_json:
@@ -199,7 +177,7 @@ def risk(
             return
         results = []
         for pos in positions:
-            _ensure_prices_cached(db, pos.symbol, pos.market_type, start_date, end_date)
+            ensure_prices_cached(db, pos.symbol, pos.market_type, start_date, end_date)
             metrics = calculate_risk_metrics(
                 db, pos.symbol, pos.market_type, start_date, end_date
             )
@@ -223,7 +201,7 @@ def correlation(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Correlation matrix between assets."""
-    db = _init_db()
+    db = init_db()
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
@@ -231,7 +209,7 @@ def correlation(
     pairs = []
     for s in symbol_list:
         mt = MarketType(market_type) if market_type else _detect_market_type(s)
-        _ensure_prices_cached(db, s, mt, start_date, end_date)
+        ensure_prices_cached(db, s, mt, start_date, end_date)
         pairs.append((s, mt))
 
     result = portfolio_correlation(db, pairs, start_date, end_date)
@@ -270,7 +248,7 @@ def technical(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Technical indicators — MA, MACD, RSI, Bollinger Bands (daily/weekly/monthly)."""
-    db = _init_db()
+    db = init_db()
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=1095)
     symbol_list = [s.strip() for s in symbol.split(",")]
@@ -278,7 +256,7 @@ def technical(
     if len(symbol_list) == 1:
         # Single symbol — multi-timeframe output
         mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
-        _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+        ensure_prices_cached(db, symbol, mt, start_date, end_date)
         multi = analyze_technical_multi(
             db, symbol, mt, start_date, end_date, verbose=verbose
         )
@@ -350,7 +328,7 @@ def technical(
         rows = []
         for s in symbol_list:
             mt = MarketType(market_type) if market_type else _detect_market_type(s)
-            _ensure_prices_cached(db, s, mt, start_date, end_date)
+            ensure_prices_cached(db, s, mt, start_date, end_date)
             result = analyze_technical(db, s, mt, start_date, end_date)
             if result.message:
                 rows.append({"Symbol": s, "Trend": result.message})
@@ -401,12 +379,12 @@ def volume(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Volume analysis — anomaly detection, turnover ratio."""
-    db = _init_db()
+    db = init_db()
     mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
-    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+    ensure_prices_cached(db, symbol, mt, start_date, end_date)
     result = analyze_volume(db, symbol, mt, start_date, end_date, verbose=verbose)
 
     if use_json:
@@ -448,12 +426,12 @@ def signals(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Signal summary — aggregated technical view."""
-    db = _init_db()
+    db = init_db()
     mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
-    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+    ensure_prices_cached(db, symbol, mt, start_date, end_date)
     result = aggregate_signals(db, symbol, mt, start_date, end_date, verbose=verbose)
 
     if use_json:
@@ -524,12 +502,12 @@ def report(
     """综合分析报告 — full report with buy-readiness checklist."""
     from ..analysis.report import full_stock_report
 
-    db = _init_db()
+    db = init_db()
     mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
-    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+    ensure_prices_cached(db, symbol, mt, start_date, end_date)
 
     try:
         r = full_stock_report(
@@ -620,3 +598,170 @@ def report(
                 print(f"  {item.dimension}: {item.score}/5 — {item.assessment}")
             print(f"  总分: {r.checklist.total_score}/{r.checklist.max_score}")
             print(f"  建议: {r.checklist.recommendation}")
+
+
+@app.command()
+def run(
+    symbol: str = typer.Argument(help="Symbol(s), comma-separated for batch"),
+    modules: str = typer.Option(
+        "all",
+        "--modules",
+        help="Comma-separated: fundamental,technical,risk,volume,signals,peer,checklist",
+    ),
+    market_type: Optional[str] = typer.Option(
+        None, "--market-type", "-m", help="Override: a_share, crypto, us"
+    ),
+    start: Optional[str] = typer.Option(None, "--start", help="Start date YYYY-MM-DD"),
+    end: Optional[str] = typer.Option(None, "--end", help="End date YYYY-MM-DD"),
+    top_n: int = typer.Option(10, "--top-n", help="Number of peers (peer module)"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Add explanations for learning"
+    ),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Composable analysis — choose which modules to run in a single call.
+
+    Examples:
+        analyze run 600519                              # all modules
+        analyze run 600519 --modules fundamental,risk   # selective
+        analyze run 600519,000858 --modules fundamental # batch
+    """
+    try:
+        module_names = parse_modules(modules)
+    except ValueError as e:
+        error_output(str(e))
+        raise typer.Exit(1)
+
+    symbol_list = [s.strip() for s in symbol.split(",")]
+    end_date = date.fromisoformat(end) if end else date.today()
+    lookback = max_lookback_days(module_names)
+    start_date = (
+        date.fromisoformat(start) if start else end_date - timedelta(days=lookback)
+    )
+
+    db = init_db()
+    needs_prices = any_needs_prices(module_names)
+    is_batch = len(symbol_list) > 1
+
+    # JSON accumulator for batch mode
+    json_results: dict = {}
+
+    for sym in symbol_list:
+        mt = MarketType(market_type) if market_type else _detect_market_type(sym)
+
+        if needs_prices:
+            ensure_prices_cached(db, sym, mt, start_date, end_date)
+
+        results: dict = {}
+        for name in module_names:
+            if name == "checklist":
+                continue  # post-processing, handled below
+            mod = MODULES[name]
+            try:
+                results[name] = mod.runner(
+                    db,
+                    sym,
+                    mt,
+                    start_date,
+                    end_date,
+                    verbose=verbose,
+                    top_n=top_n,
+                )
+            except (ValueError, RuntimeError) as e:
+                results[name] = {"error": str(e)}
+
+        # Checklist post-processing
+        if "checklist" in module_names:
+            fund = results.get("fundamental")
+            risk_r = results.get("risk")
+            sig = results.get("signals")
+            if (
+                fund
+                and risk_r
+                and not isinstance(fund, dict)
+                and not isinstance(risk_r, dict)
+            ):
+                from ..analysis.report import compute_checklist_from_parts
+
+                results["checklist"] = compute_checklist_from_parts(
+                    fund, risk_r, sig if sig and not isinstance(sig, dict) else None
+                )
+            else:
+                results["checklist"] = {
+                    "error": "checklist requires fundamental + risk modules"
+                }
+
+        if use_json:
+            # Build JSON-serializable dict
+            sym_data: dict = {}
+            for name in module_names:
+                r = results.get(name)
+                if r is None:
+                    continue
+                if isinstance(r, dict):
+                    sym_data[name] = r
+                elif isinstance(r, list):
+                    sym_data[name] = r
+                else:
+                    sym_data[name] = r.model_dump() if hasattr(r, "model_dump") else r
+            if is_batch:
+                json_results[sym] = sym_data
+            else:
+                json_results = sym_data
+        else:
+            # Text output with section headers
+            for name in module_names:
+                r = results.get(name)
+                if r is None:
+                    continue
+
+                section_header(name, sym if is_batch else None)
+
+                if isinstance(r, dict):
+                    # Error or simple dict
+                    kv_output(r)
+                    continue
+
+                mod = MODULES[name]
+                fmt_type, fmt_data = mod.formatter(r, verbose)
+
+                if fmt_type == "kv":
+                    kv_output(fmt_data)
+                elif fmt_type == "tsv":
+                    rows, columns = fmt_data
+                    tsv_output(rows, columns=columns)
+                elif fmt_type == "technical":
+                    # Multi-timeframe technical output
+                    multi = fmt_data
+                    if multi.monthly:
+                        timeframe_section("月线 (Monthly)", multi.monthly, verbose)
+                    if multi.weekly:
+                        timeframe_section("周线 (Weekly)", multi.weekly, verbose)
+                    if multi.daily:
+                        daily = multi.daily
+                        if daily.message:
+                            print(f"  {daily.message}")
+                        else:
+                            daily_kv: dict = {
+                                "Close": daily.latest_close,
+                                "Trend": daily.moving_averages.trend,
+                                "MACD_Signal": daily.macd.signal,
+                                "RSI": daily.rsi.rsi,
+                                "RSI_Zone": daily.rsi.assessment,
+                                "BB_Position": daily.bollinger.position,
+                            }
+                            if verbose:
+                                if daily.moving_averages.explanation:
+                                    daily_kv["MA_Explain"] = (
+                                        daily.moving_averages.explanation
+                                    )
+                                if daily.macd.explanation:
+                                    daily_kv["MACD_Explain"] = daily.macd.explanation
+                                if daily.rsi.explanation:
+                                    daily_kv["RSI_Explain"] = daily.rsi.explanation
+                                if daily.bollinger.explanation:
+                                    daily_kv["BB_Explain"] = daily.bollinger.explanation
+                            kv_output(daily_kv)
+
+    if use_json:
+        json_output(json_results)

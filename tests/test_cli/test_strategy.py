@@ -24,7 +24,7 @@ class TestStrategyOptimize:
             weights={"600519": 0.5, "000001": 0.5},
             explanation="等权配置",
         )
-        with patch("haoinvest.cli.strategy._ensure_prices_cached"):
+        with patch("haoinvest.cli.strategy.ensure_prices_cached"):
             with patch(
                 "haoinvest.cli.strategy.suggest_allocation", return_value=mock_result
             ):
@@ -45,7 +45,7 @@ class TestStrategyOptimize:
 
     def test_optimize_invalid_method(self, tmp_path, monkeypatch):
         monkeypatch.setenv("HAOINVEST_DATA_DIR", str(tmp_path))
-        with patch("haoinvest.cli.strategy._ensure_prices_cached"):
+        with patch("haoinvest.cli.strategy.ensure_prices_cached"):
             with patch(
                 "haoinvest.cli.strategy.suggest_allocation",
                 side_effect=ValueError("Unknown method"),

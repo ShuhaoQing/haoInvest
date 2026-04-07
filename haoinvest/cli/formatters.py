@@ -84,6 +84,14 @@ def timeframe_section(
         print(f"  RSI说明: {result.rsi.explanation}")
 
 
+def section_header(name: str, symbol: str | None = None) -> None:
+    """Print a section header like === risk === or === risk: 600519 ===."""
+    if symbol:
+        print(f"\n=== {name}: {symbol} ===")
+    else:
+        print(f"\n=== {name} ===")
+
+
 def error_output(message: str) -> None:
     """Print error message to stderr."""
     print(f"Error: {message}", file=sys.stderr)

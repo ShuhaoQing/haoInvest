@@ -6,34 +6,15 @@ from typing import Optional
 
 import typer
 
-from ..db import Database
+from ..analysis.cache import ensure_prices_cached
 from ..market import get_provider
-from ..models import MarketType
 from ..strategy.optimizer import suggest_allocation
 from ..strategy.rebalance import calculate_rebalance
+from ._shared import init_db
 from .formatters import error_output, json_output, kv_output, tsv_output
 from .market import _detect_market_type
 
 app = typer.Typer(help="Strategy — optimize allocation, rebalance.")
-
-
-def _init_db() -> Database:
-    db = Database()
-    db.init_schema()
-    return db
-
-
-def _ensure_prices_cached(
-    db: Database, symbol: str, market_type: MarketType, start: date, end: date
-) -> None:
-    """Fetch and cache price history if not already present."""
-    existing = db.get_prices(symbol, market_type, start, end)
-    if len(existing) > 10:
-        return
-    provider = get_provider(market_type)
-    bars = provider.get_price_history(symbol, start, end)
-    if bars:
-        db.save_prices(bars)
 
 
 @app.command()
@@ -52,7 +33,7 @@ def optimize(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Suggest optimal portfolio allocation."""
-    db = _init_db()
+    db = init_db()
     end_date = date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
@@ -68,7 +49,7 @@ def optimize(
 
     # Ensure price data cached
     for symbol, mt in pairs:
-        _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+        ensure_prices_cached(db, symbol, mt, start_date, end_date)
 
     try:
         result = suggest_allocation(
@@ -101,7 +82,7 @@ def rebalance(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Calculate rebalance trades to reach target allocation."""
-    db = _init_db()
+    db = init_db()
 
     if target is None:
         error_output("--target is required. Provide target weights as JSON.")

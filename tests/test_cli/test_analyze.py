@@ -181,7 +181,7 @@ class TestAnalyzeTechnicalBatch:
                 bollinger=BollingerBands(position="下轨附近"),
             ),
         ]
-        with patch("haoinvest.cli.analyze._ensure_prices_cached"):
+        with patch("haoinvest.cli.analyze.ensure_prices_cached"):
             with patch(
                 "haoinvest.cli.analyze.analyze_technical", side_effect=mock_results
             ):
@@ -209,7 +209,7 @@ class TestAnalyzeRisk:
             total_return_pct=12.0,
             num_days=252,
         )
-        with patch("haoinvest.cli.analyze._ensure_prices_cached"):
+        with patch("haoinvest.cli.analyze.ensure_prices_cached"):
             with patch(
                 "haoinvest.cli.analyze.calculate_risk_metrics",
                 return_value=mock_metrics,

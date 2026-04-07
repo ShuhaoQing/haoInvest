@@ -13,6 +13,7 @@ Built for a beginner investor in China covering A-shares, US stocks, HK stocks, 
 - **Fundamental Analysis** — PE/PB/ROE valuation assessment with financial health scoring; batch support for multi-symbol comparison
 - **Peer Comparison** — Find and compare same-sector stocks by valuation and performance
 - **Sector Browsing** — Browse A-share industry sectors and their constituent stocks
+- **Composable Analysis** — `analyze run` command with `--modules` flag to compose any combination of fundamental, technical, risk, volume, signals, peer, and checklist in a single call
 - **Comprehensive Report** — Full stock report with buy-readiness checklist combining fundamental, technical, and risk analysis
 - **Risk Metrics** — Annualized volatility, max drawdown, Sharpe ratio, Sortino ratio (powered by QuantStats)
 - **Technical Analysis** — MA, MACD, RSI, Bollinger Bands with Chinese explanations (powered by pandas-ta)
@@ -47,7 +48,12 @@ uv run haoinvest portfolio list                   # View holdings
 uv run haoinvest portfolio add-trade 600519 buy 100 1800.50
 uv run haoinvest portfolio returns                # P&L summary
 
-# Analysis
+# Composable analysis (preferred — single call, choose modules)
+uv run haoinvest analyze run 600519               # All modules
+uv run haoinvest analyze run 600519 --modules fundamental,risk,peer  # Selective
+uv run haoinvest analyze run 600519,000858 --modules fundamental     # Batch
+
+# Individual analysis commands
 uv run haoinvest analyze fundamental 600519       # PE/PB valuation
 uv run haoinvest analyze fundamental 600519,000858 # Batch comparison
 uv run haoinvest analyze risk --symbol NVDA       # Volatility, Sharpe, drawdown

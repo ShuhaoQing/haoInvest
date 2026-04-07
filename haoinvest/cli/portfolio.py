@@ -5,21 +5,15 @@ from typing import Optional
 
 import typer
 
-from ..db import Database
 from ..market import get_provider
 from ..models import MarketType, Transaction, TransactionAction
 from ..portfolio.manager import PortfolioManager
 from ..portfolio.returns import portfolio_returns_summary, realized_pnl, unrealized_pnl
+from ._shared import init_db
 from .formatters import error_output, json_output, kv_output, tsv_output
 from .market import _detect_market_type
 
 app = typer.Typer(help="Portfolio — holdings, trades, returns.")
-
-
-def _init_db() -> Database:
-    db = Database()
-    db.init_schema()
-    return db
 
 
 @app.command("list")
@@ -27,7 +21,7 @@ def list_holdings(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """View all current holdings."""
-    db = _init_db()
+    db = init_db()
     pm = PortfolioManager(db)
     summary = pm.get_portfolio_summary()
 
@@ -98,7 +92,7 @@ def add_trade(
         note=note,
     )
 
-    db = _init_db()
+    db = init_db()
 
     # Advisory guardrail check before trade
     try:
@@ -148,7 +142,7 @@ def returns(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """View returns — unrealized P&L for holdings."""
-    db = _init_db()
+    db = init_db()
 
     if symbol:
         mt = MarketType(market_type) if market_type else _detect_market_type(symbol)

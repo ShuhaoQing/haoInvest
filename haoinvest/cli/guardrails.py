@@ -4,34 +4,13 @@ from typing import Optional
 
 import typer
 
-from ..db import Database
 from ..market import get_provider
 from ..models import MarketType
+from ._shared import fetch_current_prices, init_db
 from .formatters import error_output, json_output, kv_output
 from .market import _detect_market_type
 
 app = typer.Typer(help="Guardrails — position rules, alerts, trade review.")
-
-
-def _init_db() -> Database:
-    db = Database()
-    db.init_schema()
-    return db
-
-
-def _fetch_current_prices(db: Database) -> dict[tuple[str, MarketType], float]:
-    """Fetch current prices for all holdings."""
-    positions = db.get_positions(include_zero=False)
-    prices: dict[tuple[str, MarketType], float] = {}
-    for pos in positions:
-        try:
-            provider = get_provider(pos.market_type)
-            prices[(pos.symbol, pos.market_type)] = provider.get_current_price(
-                pos.symbol
-            )
-        except Exception as e:
-            error_output(f"Failed to get price for {pos.symbol}: {e}")
-    return prices
 
 
 @app.command("health-check")
@@ -42,8 +21,8 @@ def health_check_cmd(
     """Check current portfolio against guardrail rules."""
     from ..guardrails.rules import health_check
 
-    db = _init_db()
-    prices = _fetch_current_prices(db)
+    db = init_db()
+    prices = fetch_current_prices(db)
     result = health_check(db, prices, cash_balance=cash)
 
     if use_json:
@@ -65,8 +44,8 @@ def alerts_cmd(
     """Scan all positions for threshold violations."""
     from ..guardrails.alerts import scan_alerts
 
-    db = _init_db()
-    prices = _fetch_current_prices(db)
+    db = init_db()
+    prices = fetch_current_prices(db)
     alerts = scan_alerts(db, prices)
 
     if use_json:
@@ -96,7 +75,7 @@ def config_cmd(
     """View or set guardrail configuration."""
     from ..guardrails.rules import load_config
 
-    db = _init_db()
+    db = init_db()
 
     if set_value:
         if "=" not in set_value:
@@ -132,7 +111,7 @@ def pre_trade_data_cmd(
     from ..guardrails.pre_trade_data import collect_pre_trade_data
 
     mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
-    db = _init_db()
+    db = init_db()
 
     # Get current price if not specified
     trade_price = price
@@ -144,7 +123,7 @@ def pre_trade_data_cmd(
             error_output(f"Failed to get price for {symbol}: {e}")
             raise typer.Exit(1)
 
-    prices = _fetch_current_prices(db)
+    prices = fetch_current_prices(db)
     prices[(symbol, mt)] = trade_price
 
     result = collect_pre_trade_data(
