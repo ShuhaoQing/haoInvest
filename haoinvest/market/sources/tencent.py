@@ -10,6 +10,7 @@ from datetime import date
 
 import requests
 
+from ...http_retry import api_retry
 from ...models import MarketType, PriceBar
 from ._common import market_prefix, parse_float
 
@@ -21,6 +22,7 @@ _TOTAL_CAP_YI = 45  # total market cap in 亿元
 _PB = 46
 
 
+@api_retry
 def get_current_price(symbol: str) -> float:
     """Get current price from Tencent Finance quote API."""
     prefix = market_prefix(symbol)
@@ -38,6 +40,7 @@ def get_current_price(symbol: str) -> float:
     return price
 
 
+@api_retry
 def get_price_history(symbol: str, start: date, end: date) -> list[PriceBar]:
     """Get forward-adjusted daily klines from Tencent Finance API."""
     prefix = market_prefix(symbol)
@@ -90,13 +93,7 @@ def get_valuation(symbol: str) -> dict:
         "total_market_cap": None,
     }
     try:
-        prefix = market_prefix(symbol)
-        r = requests.get(
-            f"https://qt.gtimg.cn/q={prefix}{symbol}",
-            timeout=10,
-        )
-        r.raise_for_status()
-        fields = r.text.strip().split("~")
+        fields = _fetch_quote_fields(symbol)
         if len(fields) <= _PB:
             logger.debug(
                 "Tencent response too short for %s: %d fields", symbol, len(fields)
@@ -115,3 +112,15 @@ def get_valuation(symbol: str) -> dict:
         logger.debug("Tencent valuation failed for %s: %s", symbol, e)
 
     return result
+
+
+@api_retry
+def _fetch_quote_fields(symbol: str) -> list[str]:
+    """Fetch and parse quote fields from Tencent API (with retry)."""
+    prefix = market_prefix(symbol)
+    r = requests.get(
+        f"https://qt.gtimg.cn/q={prefix}{symbol}",
+        timeout=10,
+    )
+    r.raise_for_status()
+    return r.text.strip().split("~")

@@ -12,6 +12,7 @@ dependencies = [
     "pandas-ta-classic==0.4.47",
     "quantstats==0.0.81",
     "pyportfolioopt==1.6.0",
+    "tenacity==9.1.4",
 ]
 
 [project.scripts]

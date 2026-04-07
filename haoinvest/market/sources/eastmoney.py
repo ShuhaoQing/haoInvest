@@ -9,6 +9,7 @@ import logging
 
 import requests
 
+from ...http_retry import api_retry
 from ...models import BasicInfo
 from ._common import exchange_prefix, parse_float
 
@@ -22,6 +23,7 @@ _FIN_COLUMNS = (
 )
 
 
+@api_retry
 def get_basic_info(symbol: str) -> BasicInfo:
     """Get basic company info from eastmoney emweb CompanySurvey API."""
     code = f"{exchange_prefix(symbol)}{symbol}"
@@ -47,21 +49,7 @@ def get_financial_indicators(symbol: str) -> dict:
     Gracefully returns empty dict on any failure.
     """
     try:
-        r = requests.get(
-            _DATACENTER_URL,
-            params={
-                "reportName": "RPT_LICO_FN_CPD",
-                "columns": _FIN_COLUMNS,
-                "filter": f'(SECURITY_CODE="{symbol}")',
-                "pageNumber": "1",
-                "pageSize": "1",
-                "sortColumns": "NOTICE_DATE",
-                "sortTypes": "-1",
-            },
-            timeout=10,
-        )
-        r.raise_for_status()
-        body = r.json()
+        body = _fetch_financial_data(symbol)
 
         if not body.get("success") or not body.get("result"):
             return {}
@@ -86,3 +74,23 @@ def get_financial_indicators(symbol: str) -> dict:
     except Exception as e:
         logger.debug("Eastmoney financial indicators failed for %s: %s", symbol, e)
         return {}
+
+
+@api_retry
+def _fetch_financial_data(symbol: str) -> dict:
+    """Fetch financial report data from eastmoney datacenter (with retry)."""
+    r = requests.get(
+        _DATACENTER_URL,
+        params={
+            "reportName": "RPT_LICO_FN_CPD",
+            "columns": _FIN_COLUMNS,
+            "filter": f'(SECURITY_CODE="{symbol}")',
+            "pageNumber": "1",
+            "pageSize": "1",
+            "sortColumns": "NOTICE_DATE",
+            "sortTypes": "-1",
+        },
+        timeout=10,
+    )
+    r.raise_for_status()
+    return r.json()

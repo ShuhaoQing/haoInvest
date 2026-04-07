@@ -2,6 +2,8 @@
 
 import httpx
 
+from .http_retry import api_retry
+
 # Hardcoded fallback rates (updated manually when needed)
 _FALLBACK_RATES = {
     ("USD", "CNY"): 7.25,
@@ -57,6 +59,7 @@ def _get_rate(from_ccy: str, to_ccy: str) -> float:
         raise ValueError(f"No exchange rate available for {from_ccy} → {to_ccy}")
 
 
+@api_retry
 def _fetch_live_rate(from_ccy: str, to_ccy: str) -> float:
     """Fetch live rate from a free API. Raises on failure."""
     # exchangerate-api.com free tier

@@ -10,9 +10,11 @@ import re
 
 import requests
 
+from ...http_retry import api_retry
 from ._common import market_prefix, parse_float
 
 
+@api_retry
 def get_current_price(symbol: str) -> float:
     """Get current price from Sina Finance API."""
     prefix = market_prefix(symbol)
@@ -81,20 +83,7 @@ def get_sector_constituents(sector_name: str) -> list[dict]:
             "Use 'market sector-list' to see available sectors."
         )
 
-    r = requests.get(
-        "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php"
-        "/Market_Center.getHQNodeData",
-        params={
-            "page": 1,
-            "num": 200,
-            "sort": "changepercent",
-            "asc": 0,
-            "node": node_code,
-        },
-        headers={"Referer": "https://finance.sina.com.cn"},
-        timeout=10,
-    )
-    r.encoding = "gbk"
+    r = _fetch_sector_constituents(node_code)
     stocks = r.json()
 
     rows = []
@@ -115,6 +104,27 @@ def get_sector_constituents(sector_name: str) -> list[dict]:
     return rows
 
 
+@api_retry
+def _fetch_sector_constituents(node_code: str) -> requests.Response:
+    """Fetch sector constituent data from Sina API (with retry)."""
+    r = requests.get(
+        "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php"
+        "/Market_Center.getHQNodeData",
+        params={
+            "page": 1,
+            "num": 200,
+            "sort": "changepercent",
+            "asc": 0,
+            "node": node_code,
+        },
+        headers={"Referer": "https://finance.sina.com.cn"},
+        timeout=10,
+    )
+    r.encoding = "gbk"
+    return r
+
+
+@api_retry
 def _fetch_sector_data() -> dict[str, list[str]]:
     """Fetch Sina industry board data. Returns {node_code: [fields...]}."""
     r = requests.get(
