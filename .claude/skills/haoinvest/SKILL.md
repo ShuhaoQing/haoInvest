@@ -12,15 +12,15 @@ All-in-one investment management via CLI + Claude Code agent. CLI does data + co
 
 ### Workflow 1: "帮我分析 XXX" — Analyze a stock
 
-1. Run comprehensive report:
+1. Run composable analysis (single call, all modules including peer):
    ```bash
-   uv run haoinvest analyze report <symbol>
+   uv run haoinvest analyze run <symbol>
    ```
-2. For A-shares, also run peer comparison:
+   Or select specific modules:
    ```bash
-   uv run haoinvest analyze peer <symbol>
+   uv run haoinvest analyze run <symbol> --modules fundamental,risk,peer
    ```
-3. Interpret ALL sections in Chinese:
+2. Interpret ALL sections in Chinese:
    - 估值: Is it cheap or expensive? Compare PE/PB to peers.
    - 财务健康: Is the company profitable and growing?
    - 风险: How volatile is it? What's the worst drawdown?
@@ -51,9 +51,9 @@ All-in-one investment management via CLI + Claude Code agent. CLI does data + co
 
 **触发条件**: 用户表达买入/卖出意图时。
 
-1. Run comprehensive report + guardrails pre-trade data (2 calls):
+1. Run composable analysis + guardrails pre-trade data (2 calls):
    ```bash
-   uv run haoinvest analyze report <symbol> --json
+   uv run haoinvest analyze run <symbol> --json
    uv run haoinvest guardrails pre-trade-data <symbol> <buy/sell> <qty> -m <type> --json
    ```
    If user hasn't specified quantity, ask first. If price not known, the command auto-fetches.
@@ -129,15 +129,11 @@ All-in-one investment management via CLI + Claude Code agent. CLI does data + co
 
 ### Workflow 4: "对比 A 和 B" — Compare stocks
 
-1. Batch fundamental comparison:
+1. Batch composable analysis (single call):
    ```bash
-   uv run haoinvest analyze fundamental <A>,<B> --verbose
+   uv run haoinvest analyze run <A>,<B> --modules fundamental,risk,signals
    ```
-2. Batch technical comparison:
-   ```bash
-   uv run haoinvest analyze technical <A>,<B>
-   ```
-3. Summarize: who's better on what dimension, and overall recommendation
+2. Summarize: who's better on what dimension, and overall recommendation
 
 ### Workflow 5: "定期体检" — Portfolio checkup
 
@@ -179,6 +175,13 @@ uv run haoinvest market sector <name>                          # Sector constitu
 
 ### Analysis
 ```bash
+# Composable analysis (preferred — single call, choose modules)
+uv run haoinvest analyze run <symbol(s)>                       # All modules (fundamental,technical,risk,volume,signals,peer,checklist)
+uv run haoinvest analyze run <symbol> --modules fundamental,risk,peer  # Selective modules
+uv run haoinvest analyze run <symbol> --json                   # JSON output for structured parsing
+uv run haoinvest analyze run <A>,<B> --modules fundamental     # Batch comparison
+
+# Individual commands (still available)
 uv run haoinvest analyze report <symbol>                       # Full report + buy-readiness checklist
 uv run haoinvest analyze fundamental <symbol(s)> [--verbose]   # Valuation + financial health (batch OK)
 uv run haoinvest analyze technical <symbol(s)>                 # MA/MACD/RSI/BB (batch OK)
