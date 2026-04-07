@@ -153,7 +153,9 @@ class TestAnalyzeTechnicalMulti:
         """30 days → daily OK, weekly may have limited data, monthly insufficient."""
         _seed_prices(db, days=30)
         result = analyze_technical_multi(db, "TEST", MarketType.A_SHARE)
-        assert result.daily.message is None or "Not enough" not in (result.daily.message or "")
+        assert result.daily.message is None or "Not enough" not in (
+            result.daily.message or ""
+        )
         # Monthly: 30 days = ~1 month bar, way under 14
         assert result.monthly.message is not None
         assert "Not enough" in result.monthly.message

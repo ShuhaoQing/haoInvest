@@ -56,6 +56,34 @@ def json_output(data: Any) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2, default=str))
 
 
+def timeframe_section(
+    label: str,
+    result: Any,
+    verbose: bool = False,
+) -> None:
+    """Print a compact technical indicator section for a single timeframe."""
+    print(f"\n📊 {label}")
+    if result.message:
+        print(f"  {result.message}")
+        return
+    ma = result.moving_averages
+    print(
+        f"  MA: SMA5={ma.sma_5}  SMA10={ma.sma_10}  SMA20={ma.sma_20}"
+        f" | EMA12={ma.ema_12}  EMA26={ma.ema_26}"
+    )
+    if verbose and ma.explanation:
+        print(f"  MA说明: {ma.explanation}")
+    macd = result.macd
+    print(
+        f"  MACD: DIF={macd.macd_line}  DEA={macd.signal_line}  MACD={macd.histogram}"
+    )
+    if verbose and macd.explanation:
+        print(f"  MACD说明: {macd.explanation}")
+    print(f"  RSI(14): {result.rsi.rsi}")
+    if verbose and result.rsi.explanation:
+        print(f"  RSI说明: {result.rsi.explanation}")
+
+
 def error_output(message: str) -> None:
     """Print error message to stderr."""
     print(f"Error: {message}", file=sys.stderr)

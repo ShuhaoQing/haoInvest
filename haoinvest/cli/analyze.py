@@ -8,11 +8,17 @@ import typer
 from ..analysis.fundamental import analyze_stock
 from ..analysis.risk import calculate_risk_metrics, portfolio_correlation
 from ..analysis.signals import aggregate_signals
-from ..analysis.technical import analyze_technical
+from ..analysis.technical import analyze_technical, analyze_technical_multi
 from ..analysis.volume import analyze_volume
 from ..db import Database
 from ..models import MarketType
-from .formatters import error_output, json_output, kv_output, tsv_output
+from .formatters import (
+    error_output,
+    json_output,
+    kv_output,
+    timeframe_section,
+    tsv_output,
+)
 from .market import _detect_market_type
 
 app = typer.Typer(help="Analysis — fundamental, risk, technical, volume, signals.")
@@ -254,23 +260,32 @@ def technical(
     ),
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
-    """Technical indicators — MA, MACD, RSI, Bollinger Bands."""
+    """Technical indicators — MA, MACD, RSI, Bollinger Bands (daily/weekly/monthly)."""
     db = _init_db()
     end_date = date.fromisoformat(end) if end else date.today()
-    start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
+    start_date = date.fromisoformat(start) if start else end_date - timedelta(days=730)
     symbol_list = [s.strip() for s in symbol.split(",")]
 
     if len(symbol_list) == 1:
-        # Single symbol — detailed kv_output (original behavior)
+        # Single symbol — multi-timeframe output
         mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
         _ensure_prices_cached(db, symbol, mt, start_date, end_date)
-        result = analyze_technical(
+        multi = analyze_technical_multi(
             db, symbol, mt, start_date, end_date, verbose=verbose
         )
 
         if use_json:
-            json_output(result)
+            json_output(multi)
         else:
+            # Monthly and weekly: compact timeframe sections
+            if multi.monthly:
+                timeframe_section("月线技术指标 (Monthly)", multi.monthly, verbose)
+            if multi.weekly:
+                timeframe_section("周线技术指标 (Weekly)", multi.weekly, verbose)
+
+            # Daily: preserve original kv_output format for backward compatibility
+            result = multi.daily
+            print()  # blank line before daily section
             output = {"symbol": result.symbol, "date": str(result.latest_date)}
             if result.message:
                 output["message"] = result.message

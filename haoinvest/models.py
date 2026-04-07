@@ -377,9 +377,7 @@ class TechnicalIndicators(BaseModel):
     macd: MACDResult = Field(default_factory=MACDResult)
     rsi: RSIResult = Field(default_factory=RSIResult)
     bollinger: BollingerBands = Field(default_factory=BollingerBands)
-    timeframe: str = Field(
-        default="daily", description="daily/weekly/monthly"
-    )
+    timeframe: str = Field(default="daily", description="daily/weekly/monthly")
     message: Optional[str] = Field(
         default=None, description="Warning if insufficient data"
     )

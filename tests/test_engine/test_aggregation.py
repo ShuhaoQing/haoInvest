@@ -2,13 +2,13 @@
 
 from datetime import date
 
-import pytest
-
 from haoinvest.engine.aggregation import aggregate_to_monthly, aggregate_to_weekly
 from haoinvest.models import MarketType, PriceBar
 
 
-def _bar(trade_date: str, o: float, h: float, l: float, c: float, v: float) -> PriceBar:
+def _bar(
+    trade_date: str, o: float, h: float, low: float, c: float, v: float
+) -> PriceBar:
     """Helper to create a PriceBar with defaults."""
     return PriceBar(
         symbol="600519",
@@ -16,7 +16,7 @@ def _bar(trade_date: str, o: float, h: float, l: float, c: float, v: float) -> P
         trade_date=date.fromisoformat(trade_date),
         open=o,
         high=h,
-        low=l,
+        low=low,
         close=c,
         volume=v,
     )
