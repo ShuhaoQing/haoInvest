@@ -5,13 +5,14 @@ from typing import Optional
 
 import typer
 
+from ..analysis.cache import ensure_prices_cached
 from ..analysis.fundamental import analyze_stock
 from ..analysis.risk import calculate_risk_metrics, portfolio_correlation
 from ..analysis.signals import aggregate_signals
 from ..analysis.technical import analyze_technical, analyze_technical_multi
 from ..analysis.volume import analyze_volume
-from ..db import Database
 from ..models import MarketType
+from ._shared import init_db
 from .formatters import (
     error_output,
     json_output,
@@ -22,36 +23,6 @@ from .formatters import (
 from .market import _detect_market_type
 
 app = typer.Typer(help="Analysis — fundamental, risk, technical, volume, signals.")
-
-
-def _init_db() -> Database:
-    db = Database()
-    db.init_schema()
-    return db
-
-
-def _ensure_prices_cached(
-    db: Database, symbol: str, market_type: MarketType, start: date, end: date
-) -> None:
-    """Fetch and cache price history if not already present."""
-    from ..market import get_provider
-
-    existing = db.get_prices(symbol, market_type, start, end)
-    if len(existing) > 10:
-        # Check if cached data covers the requested start date.
-        # If not, fetch the missing earlier portion.
-        earliest_cached = min(b.trade_date for b in existing)
-        if earliest_cached <= start + timedelta(days=7):
-            return
-        provider = get_provider(market_type)
-        bars = provider.get_price_history(symbol, start, earliest_cached)
-        if bars:
-            db.save_prices(bars)
-        return
-    provider = get_provider(market_type)
-    bars = provider.get_price_history(symbol, start, end)
-    if bars:
-        db.save_prices(bars)
 
 
 @app.command()
@@ -178,13 +149,13 @@ def risk(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Risk metrics — volatility, drawdown, Sharpe ratio, Sortino ratio."""
-    db = _init_db()
+    db = init_db()
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
     if symbol:
         mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
-        _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+        ensure_prices_cached(db, symbol, mt, start_date, end_date)
         result = calculate_risk_metrics(db, symbol, mt, start_date, end_date)
         output = {"symbol": symbol, **result.model_dump()}
         if use_json:
@@ -199,7 +170,7 @@ def risk(
             return
         results = []
         for pos in positions:
-            _ensure_prices_cached(db, pos.symbol, pos.market_type, start_date, end_date)
+            ensure_prices_cached(db, pos.symbol, pos.market_type, start_date, end_date)
             metrics = calculate_risk_metrics(
                 db, pos.symbol, pos.market_type, start_date, end_date
             )
@@ -223,7 +194,7 @@ def correlation(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Correlation matrix between assets."""
-    db = _init_db()
+    db = init_db()
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
@@ -231,7 +202,7 @@ def correlation(
     pairs = []
     for s in symbol_list:
         mt = MarketType(market_type) if market_type else _detect_market_type(s)
-        _ensure_prices_cached(db, s, mt, start_date, end_date)
+        ensure_prices_cached(db, s, mt, start_date, end_date)
         pairs.append((s, mt))
 
     result = portfolio_correlation(db, pairs, start_date, end_date)
@@ -270,7 +241,7 @@ def technical(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Technical indicators — MA, MACD, RSI, Bollinger Bands (daily/weekly/monthly)."""
-    db = _init_db()
+    db = init_db()
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=1095)
     symbol_list = [s.strip() for s in symbol.split(",")]
@@ -278,7 +249,7 @@ def technical(
     if len(symbol_list) == 1:
         # Single symbol — multi-timeframe output
         mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
-        _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+        ensure_prices_cached(db, symbol, mt, start_date, end_date)
         multi = analyze_technical_multi(
             db, symbol, mt, start_date, end_date, verbose=verbose
         )
@@ -350,7 +321,7 @@ def technical(
         rows = []
         for s in symbol_list:
             mt = MarketType(market_type) if market_type else _detect_market_type(s)
-            _ensure_prices_cached(db, s, mt, start_date, end_date)
+            ensure_prices_cached(db, s, mt, start_date, end_date)
             result = analyze_technical(db, s, mt, start_date, end_date)
             if result.message:
                 rows.append({"Symbol": s, "Trend": result.message})
@@ -401,12 +372,12 @@ def volume(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Volume analysis — anomaly detection, turnover ratio."""
-    db = _init_db()
+    db = init_db()
     mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
-    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+    ensure_prices_cached(db, symbol, mt, start_date, end_date)
     result = analyze_volume(db, symbol, mt, start_date, end_date, verbose=verbose)
 
     if use_json:
@@ -448,12 +419,12 @@ def signals(
     use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Signal summary — aggregated technical view."""
-    db = _init_db()
+    db = init_db()
     mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
-    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+    ensure_prices_cached(db, symbol, mt, start_date, end_date)
     result = aggregate_signals(db, symbol, mt, start_date, end_date, verbose=verbose)
 
     if use_json:
@@ -524,12 +495,12 @@ def report(
     """综合分析报告 — full report with buy-readiness checklist."""
     from ..analysis.report import full_stock_report
 
-    db = _init_db()
+    db = init_db()
     mt = MarketType(market_type) if market_type else _detect_market_type(symbol)
     end_date = date.fromisoformat(end) if end else date.today()
     start_date = date.fromisoformat(start) if start else end_date - timedelta(days=365)
 
-    _ensure_prices_cached(db, symbol, mt, start_date, end_date)
+    ensure_prices_cached(db, symbol, mt, start_date, end_date)
 
     try:
         r = full_stock_report(

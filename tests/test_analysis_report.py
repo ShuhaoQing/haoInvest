@@ -262,7 +262,7 @@ class TestReportCLI:
             ),
         )
         with (
-            patch("haoinvest.cli.analyze._ensure_prices_cached"),
+            patch("haoinvest.cli.analyze.ensure_prices_cached"),
             patch(
                 "haoinvest.analysis.report.full_stock_report",
                 return_value=mock_report,
