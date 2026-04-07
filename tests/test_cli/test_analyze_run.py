@@ -89,9 +89,7 @@ def _mock_technical():
         rsi=RSIResult(rsi=55.0, assessment="中性"),
         bollinger=BollingerBands(position="中轨附近"),
     )
-    return MultiTimeframeTechnical(
-        symbol="600519", market_type="a_share", daily=daily
-    )
+    return MultiTimeframeTechnical(symbol="600519", market_type="a_share", daily=daily)
 
 
 def _mock_volume():
