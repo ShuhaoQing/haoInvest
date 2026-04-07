@@ -4,6 +4,7 @@ from datetime import date, datetime
 
 import httpx
 
+from ..http_retry import api_retry
 from ..models import BasicInfo, MarketType, PriceBar
 from .provider import MarketProvider
 
@@ -50,6 +51,7 @@ class CryptoProvider(MarketProvider):
             self._client = httpx.Client(timeout=10.0)
         return self._client
 
+    @api_retry
     def get_current_price(self, symbol: str) -> float:
         """Get latest USD price for a crypto asset.
 
@@ -67,6 +69,7 @@ class CryptoProvider(MarketProvider):
             raise ValueError(f"Crypto asset {symbol} (id={coin_id}) not found")
         return float(data[coin_id]["usd"])
 
+    @api_retry
     def get_price_history(self, symbol: str, start: date, end: date) -> list[PriceBar]:
         """Get daily OHLC data for a crypto asset (close prices only from CoinGecko free tier)."""
         coin_id = _to_coingecko_id(symbol)
@@ -93,6 +96,7 @@ class CryptoProvider(MarketProvider):
             )
         return bars
 
+    @api_retry
     def get_basic_info(self, symbol: str) -> BasicInfo:
         """Get basic info for a crypto asset."""
         coin_id = _to_coingecko_id(symbol)
