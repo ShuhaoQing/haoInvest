@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from haoinvest.analysis.technical import analyze_technical
+from haoinvest.analysis.technical import analyze_technical, analyze_technical_multi
 from haoinvest.db import Database
 from haoinvest.models import MarketType, PriceBar
 
@@ -124,3 +124,46 @@ class TestAnalyzeTechnical:
         assert not hasattr(t, "_compute_macd")
         assert not hasattr(t, "_compute_rsi")
         assert not hasattr(t, "_compute_bollinger")
+
+
+# ---------------------------------------------------------------------------
+# Multi-timeframe analysis tests
+# ---------------------------------------------------------------------------
+
+
+class TestAnalyzeTechnicalMulti:
+    def test_all_timeframes_with_sufficient_data(self, db):
+        """2 years of data → daily/weekly/monthly all populated."""
+        _seed_prices(db, days=730, daily_pct=0.002)
+        result = analyze_technical_multi(db, "TEST", MarketType.A_SHARE)
+        assert result.symbol == "TEST"
+        assert result.daily.timeframe == "daily"
+        assert result.weekly.timeframe == "weekly"
+        assert result.monthly.timeframe == "monthly"
+        # Daily should have full indicators
+        assert result.daily.message is None
+        assert result.daily.moving_averages.sma_20 is not None
+        # Weekly should have indicators (730 days ≈ 104 weeks)
+        assert result.weekly.moving_averages.sma_20 is not None
+        assert result.weekly.macd.macd_line is not None
+        # Monthly should have indicators (730 days ≈ 24 months)
+        assert result.monthly.moving_averages.sma_20 is not None
+
+    def test_short_data_monthly_insufficient(self, db):
+        """30 days → daily OK, weekly may have limited data, monthly insufficient."""
+        _seed_prices(db, days=30)
+        result = analyze_technical_multi(db, "TEST", MarketType.A_SHARE)
+        assert result.daily.message is None or "Not enough" not in (
+            result.daily.message or ""
+        )
+        # Monthly: 30 days = ~1 month bar, way under 14
+        assert result.monthly.message is not None
+        assert "Not enough" in result.monthly.message
+
+    def test_timeframe_labels_correct(self, db):
+        """Verify timeframe field is set correctly on each result."""
+        _seed_prices(db, days=60)
+        result = analyze_technical_multi(db, "TEST", MarketType.A_SHARE)
+        assert result.daily.timeframe == "daily"
+        assert result.weekly.timeframe == "weekly"
+        assert result.monthly.timeframe == "monthly"
