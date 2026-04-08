@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from ..config import ZERO_THRESHOLD
 from ..db import Database
@@ -107,7 +107,6 @@ def scan_alerts(
 
 def _scan_thesis_review_alerts(db: Database) -> list[PositionAlert]:
     """Check for active theses that are overdue for review."""
-    from datetime import datetime
 
     theses = db.get_theses(status=ThesisStatus.ACTIVE)
     alerts: list[PositionAlert] = []
@@ -123,7 +122,7 @@ def _scan_thesis_review_alerts(db: Database) -> list[PositionAlert]:
             alerts.append(
                 PositionAlert(
                     symbol=thesis.symbol,
-                    alert_type=AlertType.GAIN_REVIEW,
+                    alert_type=AlertType.THESIS_REVIEW,
                     current_pnl_pct=0,
                     threshold_pct=0,
                     original_thesis=thesis.thesis_summary,

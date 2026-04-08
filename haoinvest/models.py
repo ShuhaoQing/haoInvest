@@ -604,6 +604,7 @@ class AlertType(str, Enum):
     GAIN_REVIEW = "gain_review"
     LOSS_REVIEW = "loss_review"
     RAPID_CHANGE = "rapid_change"
+    THESIS_REVIEW = "thesis_review"
 
 
 class GuardrailsConfig(BaseModel):

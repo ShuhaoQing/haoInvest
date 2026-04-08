@@ -40,32 +40,28 @@ def get_basic_info(symbol: str) -> BasicInfo:
     )
 
 
-def get_financial_indicators(symbol: str, periods: int = 1) -> dict | list[dict]:
+def get_financial_indicators(symbol: str, periods: int = 1) -> list[dict]:
     """Fetch financial indicators from eastmoney datacenter API.
 
     Uses RPT_LICO_FN_CPD (业绩报表).
-    Returns a dict of optional fields for BasicInfo enrichment (periods=1),
-    or a list of dicts for multi-period analysis (periods>1).
-    Gracefully returns empty dict/list on any failure.
+    Returns a list of dicts (one per reporting period) for BasicInfo enrichment
+    or multi-period analysis. Callers use ``result[0]`` for the latest period.
+    Gracefully returns empty list on any failure.
     """
     try:
         body = _fetch_financial_data(symbol, page_size=periods)
 
         if not body.get("success") or not body.get("result"):
-            return [] if periods > 1 else {}
+            return []
 
         data = body["result"].get("data")
         if not data:
-            return [] if periods > 1 else {}
+            return []
 
-        results = [_parse_financial_row(row) for row in data]
-
-        if periods > 1:
-            return results
-        return results[0] if results else {}
+        return [_parse_financial_row(row) for row in data]
     except Exception as e:
         logger.debug("Eastmoney financial indicators failed for %s: %s", symbol, e)
-        return [] if periods > 1 else {}
+        return []
 
 
 def _parse_financial_row(row: dict) -> dict:
@@ -152,6 +148,9 @@ def screen_stocks(
     Returns dict with 'total' count and 'data' list of matching stocks.
     Each stock has: symbol, name, price, change_pct, pe, pb, roe, market_cap,
     dividend_yield.
+
+    Note: loss-making companies (PE < 0) are only excluded automatically when
+    pe_max is set without pe_min. Other filter combinations may still include them.
     """
     # Build filter string: each condition is (FIELD>VALUE) or (FIELD<VALUE)
     filters = []

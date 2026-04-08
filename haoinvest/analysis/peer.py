@@ -97,8 +97,10 @@ def _percentile(value: float | None, sorted_vals: list[float]) -> str | None:
 
     Returns a string like "32%" meaning cheaper than 68% of peers.
     """
+    import bisect
+
     if value is None or value <= 0 or not sorted_vals:
         return None
-    count_below = sum(1 for v in sorted_vals if v < value)
+    count_below = bisect.bisect_left(sorted_vals, value)
     pctl = round(count_below / len(sorted_vals) * 100)
     return f"{pctl}%"

@@ -58,7 +58,8 @@ class AShareProvider(MarketProvider):
         with bypass_proxy():
             info = eastmoney.get_basic_info(symbol)
             valuation = tencent.get_valuation(symbol)
-            fin = eastmoney.get_financial_indicators(symbol)
+            fin_list = eastmoney.get_financial_indicators(symbol)
+            fin = fin_list[0] if fin_list else {}
 
         return BasicInfo(
             name=info.name,

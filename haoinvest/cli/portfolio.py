@@ -243,7 +243,17 @@ def thesis_add(
 ) -> None:
     """记录投资逻辑 — record why you bought a stock."""
     entry_date = date.fromisoformat(entry_date_str) if entry_date_str else date.today()
-    key_assumptions = json.loads(assumptions) if assumptions else []
+    if assumptions:
+        try:
+            key_assumptions = json.loads(assumptions)
+        except json.JSONDecodeError:
+            error_output(
+                "Invalid JSON for --assumptions. Expected format: "
+                '\'["assumption1", "assumption2"]\''
+            )
+            raise typer.Exit(1)
+    else:
+        key_assumptions = []
 
     thesis = InvestmentThesis(
         symbol=symbol,

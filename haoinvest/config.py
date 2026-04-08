@@ -11,13 +11,18 @@ def _project_root() -> Path:
         if (current / "pyproject.toml").exists():
             return current
         current = current.parent
+    import logging
+
+    logging.getLogger(__name__).warning(
+        "Could not find pyproject.toml; falling back to parent of package directory"
+    )
     return Path(__file__).resolve().parent.parent
 
 
 def get_data_dir() -> Path:
     """Return the data directory, creating it if needed.
 
-    Default: <project_root>/data/
+    Default: <project_root>/.haoinvest/
     Override: HAOINVEST_DATA_DIR environment variable
     """
     data_dir = Path(
