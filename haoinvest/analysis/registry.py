@@ -98,6 +98,20 @@ def _run_signals(
     return aggregate_signals(db, symbol, market_type, start, end, verbose=verbose)
 
 
+def _run_trends(
+    db: Database,
+    symbol: str,
+    market_type: MarketType,
+    start: date,
+    end: date,
+    **kwargs: Any,
+) -> Any:
+    from .trends import financial_trends
+
+    periods = kwargs.get("periods", 8)
+    return financial_trends(symbol, market_type, periods=periods)
+
+
 def _run_peer(
     db: Database,
     symbol: str,
@@ -206,10 +220,36 @@ def _format_signals(result: Any, verbose: bool = False) -> tuple[str, Any]:
     return ("kv", output)
 
 
+def _format_trends(result: Any, verbose: bool = False) -> tuple[str, Any]:
+    if result and "message" in result[0]:
+        return ("kv", {"message": result[0]["message"]})
+    columns = [
+        "report_date",
+        "roe",
+        "revenue_growth",
+        "net_profit_growth",
+        "gross_margin",
+        "profit_margin",
+        "eps",
+        "dividend_yield",
+    ]
+    return ("tsv", (result, columns))
+
+
 def _format_peer(result: Any, verbose: bool = False) -> tuple[str, Any]:
     if result and "message" in result[0]:
         return ("kv", {"message": result[0]["message"]})
-    columns = ["Symbol", "Name", "Price", "Change%", "PE", "PB", "MarketCap"]
+    columns = [
+        "Symbol",
+        "Name",
+        "Price",
+        "Change%",
+        "PE",
+        "PE_Pctl",
+        "PB",
+        "PB_Pctl",
+        "MarketCap",
+    ]
     return ("tsv", (result, columns))
 
 
@@ -284,6 +324,14 @@ MODULES: dict[str, AnalysisModule] = {
         runner=_run_signals,
         formatter=_format_signals,
         needs_prices=True,
+    ),
+    "trends": AnalysisModule(
+        name="trends",
+        runner=_run_trends,
+        formatter=_format_trends,
+        needs_prices=False,
+        default_lookback_days=0,
+        extra_kwargs=["periods"],
     ),
     "peer": AnalysisModule(
         name="peer",
