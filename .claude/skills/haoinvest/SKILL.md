@@ -29,23 +29,39 @@ All-in-one investment management via CLI + Claude Code agent. CLI does data + co
 4. Point out weak areas and suggest what else to check
 5. If data is missing (e.g., financial health = N/A), say so honestly
 
-### Workflow 2: "我有闲钱想投资" — Investment direction
+### Workflow 2: "我有闲钱想投资" — Stock discovery & screening
 
-1. Check current portfolio:
+参考: `.claude/skills/haoinvest/references/stock-screening-workflow.md`
+
+1. Check current portfolio to identify sector gaps:
    ```bash
    uv run haoinvest portfolio list
    ```
-2. Identify concentration: which sectors are overweight?
-3. Scan sector rankings:
+2. Judge market environment (use web search if needed for policy/macro context)
+3. Scan sector rankings + capital flow:
    ```bash
    uv run haoinvest market sector-list
+   uv run haoinvest market sector-flow              # beta, may fail
+   uv run haoinvest market sector-flow --type concept  # concept boards
    ```
-4. Drill into promising sectors:
+4. Based on user profile + market environment, select screening strategy
+   (参考 `stock-screening-workflow.md` 中的预置策略: 价值型/成长型/高分红型/防御型):
+   ```bash
+   uv run haoinvest market screen --roe-min 15 --pe-max 20 --cap-min 10e9
+   ```
+5. Drill into promising sectors:
    ```bash
    uv run haoinvest market sector <板块名>
    ```
-5. Run reports on 2-3 candidates from underrepresented sectors
-6. Explain WHY each candidate diversifies the portfolio
+6. Run deep analysis on top 3-5 candidates:
+   ```bash
+   uv run haoinvest analyze run <sym1>,<sym2>,<sym3> --modules fundamental,risk,peer
+   ```
+7. Rank candidates considering: 持仓互补性 + 估值 + 成长性 + 风险
+8. Save research to Obsidian vault:
+   ```bash
+   obsidian vault=".haoinvest/vault" create path="个股/<symbol>-<name>.md" content="..." silent
+   ```
 
 ### Workflow 3: "我想买/卖 XXX" — Pre-Trade Review (5维度审查)
 
@@ -75,12 +91,22 @@ All-in-one investment management via CLI + Claude Code agent. CLI does data + co
 
 4. **隐式情绪检测** (见 Workflow 3b)
 
-5. If proceeding, suggest recording journal:
+5. If proceeding with a BUY, record investment thesis:
+   ```bash
+   uv run haoinvest portfolio thesis add <symbol> <price> "<买入理由>" \
+     --assumptions '["假设1", "假设2"]' --target <目标价> --stop-loss <止损价>
+   ```
+   And suggest recording journal:
    ```bash
    uv run haoinvest journal add "<决策理由>" --decision buy --emotion <detected> --symbols <symbol>
    ```
 
-6. Always remind: **这不是投资建议，最终决定需要你自己判断**
+6. Save analysis to Obsidian vault:
+   ```bash
+   obsidian vault=".haoinvest/vault" create path="个股/<symbol>-<name>.md" content="..." silent
+   ```
+
+7. Always remind: **这不是投资建议，最终决定需要你自己判断**
 
 ### Workflow 3b: 隐式情绪检测 (每次交易讨论时自动执行)
 
@@ -137,21 +163,40 @@ All-in-one investment management via CLI + Claude Code agent. CLI does data + co
 
 ### Workflow 5: "定期体检" — Portfolio checkup
 
+参考: `.claude/skills/haoinvest/references/position-management.md`
+
 1. Portfolio holdings + P&L:
    ```bash
    uv run haoinvest portfolio list
    uv run haoinvest portfolio returns
    ```
-2. Risk assessment:
+2. Check guardrails alerts + thesis review status:
+   ```bash
+   uv run haoinvest guardrails alerts --json
+   uv run haoinvest portfolio thesis list
+   ```
+3. For theses overdue for review, run analysis to check assumptions:
+   ```bash
+   uv run haoinvest analyze run <symbol> --modules fundamental,risk,signals
+   ```
+   Compare current data against thesis key_assumptions.
+   Mark reviewed after analysis:
+   ```bash
+   uv run haoinvest portfolio thesis review <thesis_id>
+   ```
+4. Risk assessment:
    ```bash
    uv run haoinvest analyze risk
    ```
-3. For each holding with poor risk metrics, run a quick report
-4. Check allocation via:
+5. Check allocation and suggest rebalancing:
    ```bash
    uv run haoinvest strategy optimize
    ```
-5. Suggest rebalancing if needed
+6. Search for prior research in Obsidian vault:
+   ```bash
+   obsidian vault=".haoinvest/vault" search query="<symbol>" path="个股" limit=5
+   ```
+7. Append checkup results to vault notes
 
 ### Workflow 6: "情绪复盘" — Decision review
 
@@ -171,6 +216,8 @@ uv run haoinvest market quote <symbol(s)>                      # Price + info (b
 uv run haoinvest market history <symbol> [--start] [--end]     # OHLCV bars (30 days default)
 uv run haoinvest market sector-list                            # A-share industry board ranking
 uv run haoinvest market sector <name>                          # Sector constituents
+uv run haoinvest market screen [--pe-max] [--roe-min] [--cap-min] [--div-min] [--sort] [--limit]  # Stock screening
+uv run haoinvest market sector-flow [--type industry|concept] [--limit]  # Sector capital flow (beta)
 ```
 
 ### Analysis
@@ -199,6 +246,16 @@ uv run haoinvest portfolio add-trade <symbol> <action> <qty> <price> [--fee] [--
 uv run haoinvest portfolio returns [--symbol <sym>]            # P&L
 ```
 Actions: `buy`, `sell`, `dividend`, `split`, `transfer_in`, `transfer_out`
+
+### Thesis
+```bash
+uv run haoinvest portfolio thesis add <symbol> <price> "<理由>" [--assumptions '["..."]'] [--target] [--stop-loss]
+uv run haoinvest portfolio thesis list [--symbol] [--status active|invalidated|realized]
+uv run haoinvest portfolio thesis show <id>                    # Full thesis details
+uv run haoinvest portfolio thesis review <id>                  # Mark reviewed (resets timer)
+uv run haoinvest portfolio thesis invalidate <id> "<reason>"   # Mark invalidated
+uv run haoinvest portfolio thesis realize <id>                 # Mark realized
+```
 
 ### Strategy
 ```bash
@@ -242,6 +299,31 @@ For crypto prices, **prefer Crypto.com MCP tools** when available:
 - `mcp__claude_ai_Crypto_com__get_ticker` / `get_tickers`
 
 Fall back to CLI if MCP is unavailable.
+
+### Obsidian Vault (Research Knowledge Base)
+
+Vault location: `.haoinvest/vault/` (relative to project root)
+
+Use the `obsidian-cli` skill for all vault operations:
+```bash
+obsidian vault=".haoinvest/vault" search query="<keyword>" limit=5    # Search notes
+obsidian vault=".haoinvest/vault" read path="个股/600519-贵州茅台.md"  # Read note
+obsidian vault=".haoinvest/vault" create path="个股/<sym>-<name>.md" content="..." silent  # New note
+obsidian vault=".haoinvest/vault" append path="个股/<sym>-<name>.md" content="## <date> 分析\n..."  # Add to existing
+```
+
+Directory structure: `个股/` (stock analysis), `行业/` (sector research), `政策/` (policy notes), `模板/` (templates).
+Use Obsidian wikilinks for cross-references: `[[白酒行业]]`, `[[600519-贵州茅台]]`.
+
+### Reference Files
+
+Analysis frameworks are in `.claude/skills/haoinvest/references/`:
+- `a-share-analysis-framework.md` — 5-dimension A-share analysis framework
+- `valuation-guide.md` — Relative valuation methods by industry
+- `position-management.md` — Add/reduce/rotate decision framework
+- `stock-screening-workflow.md` — Top-down screening with preset strategies
+
+Refer to these when interpreting analysis results or guiding investment decisions.
 
 ## Teaching Mode
 
