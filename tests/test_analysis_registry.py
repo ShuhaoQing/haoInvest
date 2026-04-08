@@ -73,7 +73,7 @@ class TestModuleRegistry:
             assert isinstance(mod.default_lookback_days, int)
 
     def test_module_count(self):
-        assert len(MODULES) == 7
+        assert len(MODULES) == 8
 
     def test_module_names(self):
         expected = {
@@ -82,6 +82,7 @@ class TestModuleRegistry:
             "risk",
             "volume",
             "signals",
+            "trends",
             "peer",
             "checklist",
         }

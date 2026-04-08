@@ -91,11 +91,22 @@ def aggregate_signals(
         neutral += 1
         details.append("布林带: 中轨附近 (中性)")
 
-    # Volume note (does not vote)
-    if vol.is_anomaly:
-        details.append(f"成交量: 放量 (ratio={vol.volume_ratio}x, 趋势确认)")
-    elif vol.assessment == "缩量":
-        details.append(f"成交量: 缩量 (ratio={vol.volume_ratio}x)")
+    # Volume confirmation: high volume amplifies the dominant signal
+    if vol.is_anomaly and vol.volume_ratio is not None:
+        if bullish > bearish:
+            bullish += 1
+            details.append(
+                f"成交量: 放量确认多头 (+1 多, ratio={vol.volume_ratio:.1f}x)"
+            )
+        elif bearish > bullish:
+            bearish += 1
+            details.append(
+                f"成交量: 放量确认空头 (+1 空, ratio={vol.volume_ratio:.1f}x)"
+            )
+        else:
+            details.append(f"成交量: 放量但方向不明 (ratio={vol.volume_ratio:.1f}x)")
+    elif vol.assessment == "缩量" and vol.volume_ratio is not None:
+        details.append(f"成交量: 缩量 (ratio={vol.volume_ratio:.1f}x)")
 
     # Overall signal
     if bullish > bearish:
@@ -105,9 +116,11 @@ def aggregate_signals(
     else:
         overall = "中性"
 
-    # Confidence
+    # Confidence: volume-confirmed signals get higher confidence
     max_votes = max(bullish, bearish, neutral)
-    if max_votes >= 4:
+    if vol.is_anomaly and max_votes >= 3:
+        confidence = "高"
+    elif max_votes >= 4:
         confidence = "高"
     elif max_votes >= 3:
         confidence = "中"

@@ -55,21 +55,52 @@ def find_peers(
         top_peers.append(c)
         top_codes.add(c.get("code", ""))
 
+    # Collect PE/PB values for percentile calculation (from all constituents)
+    all_pe = [
+        c.get("pe_ratio")
+        for c in constituents
+        if c.get("pe_ratio") is not None and c.get("pe_ratio") > 0
+    ]
+    all_pb = [
+        c.get("pb_ratio")
+        for c in constituents
+        if c.get("pb_ratio") is not None and c.get("pb_ratio") > 0
+    ]
+    all_pe.sort()
+    all_pb.sort()
+
     # Build comparison rows using sector constituent data (no extra API calls)
     rows = []
     for c in top_peers:
         code = c.get("code", "")
-        rows.append(
-            {
-                "Symbol": code,
-                "Name": c.get("name", ""),
-                "Price": c.get("price"),
-                "Change%": c.get("change_pct"),
-                "PE": c.get("pe_ratio"),
-                "PB": c.get("pb_ratio"),
-                "MarketCap": c.get("total_market_cap"),
-                "is_target": code == symbol,
-            }
-        )
+        pe = c.get("pe_ratio")
+        pb = c.get("pb_ratio")
+        row = {
+            "Symbol": code,
+            "Name": c.get("name", ""),
+            "Price": c.get("price"),
+            "Change%": c.get("change_pct"),
+            "PE": pe,
+            "PB": pb,
+            "PE_Pctl": _percentile(pe, all_pe),
+            "PB_Pctl": _percentile(pb, all_pb),
+            "MarketCap": c.get("total_market_cap"),
+            "is_target": code == symbol,
+        }
+        rows.append(row)
 
     return rows
+
+
+def _percentile(value: float | None, sorted_vals: list[float]) -> str | None:
+    """Calculate percentile of value within a sorted list.
+
+    Returns a string like "32%" meaning cheaper than 68% of peers.
+    """
+    import bisect
+
+    if value is None or value <= 0 or not sorted_vals:
+        return None
+    count_below = bisect.bisect_left(sorted_vals, value)
+    pctl = round(count_below / len(sorted_vals) * 100)
+    return f"{pctl}%"

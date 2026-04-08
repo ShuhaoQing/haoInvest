@@ -50,7 +50,9 @@ class TestSignalAggregation:
         result = aggregate_signals(db, "UP", MarketType.A_SHARE)
         # MA is trend-following and should be bullish
         assert any("多头排列" in d for d in result.details)
-        assert result.bullish_count + result.bearish_count + result.neutral_count == 4
+        # 4 base indicators + optional volume confirmation vote
+        total = result.bullish_count + result.bearish_count + result.neutral_count
+        assert total >= 4
 
     def test_downtrend_ma_bearish(self, db):
         """In a downtrend, MA trend should be bearish."""
@@ -73,11 +75,11 @@ class TestSignalAggregation:
         assert len(result.details) >= 4  # at least MA, MACD, RSI, Bollinger
 
     def test_vote_counts_sum(self, db):
-        """Bullish + bearish + neutral should equal total indicators (4)."""
+        """Bullish + bearish + neutral should be 4 (base) or 5 (with volume confirmation)."""
         _seed_trend(db, "TEST", daily_pct=0.005, days=60)
         result = aggregate_signals(db, "TEST", MarketType.A_SHARE)
         total = result.bullish_count + result.bearish_count + result.neutral_count
-        assert total == 4
+        assert total in (4, 5)
 
     def test_confidence_reflects_agreement(self, db):
         """Confidence should reflect degree of indicator agreement."""

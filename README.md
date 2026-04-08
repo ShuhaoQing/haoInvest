@@ -12,12 +12,15 @@ Built for a beginner investor in China covering A-shares, US stocks, HK stocks, 
 - **Market Data** — Real-time quotes from Sina/Tencent/eastmoney APIs (A-shares), Yahoo Finance (US/HK), Crypto.com (crypto)
 - **Fundamental Analysis** — PE/PB/ROE valuation assessment with financial health scoring; batch support for multi-symbol comparison
 - **Peer Comparison** — Find and compare same-sector stocks by valuation and performance
+- **Stock Screening** — Screen A-share stocks by PE, PB, ROE, market cap, dividend yield via eastmoney xuangu API
+- **Sector Capital Flow** — Track sector-level capital inflow/outflow (industry & concept boards, beta)
 - **Sector Browsing** — Browse A-share industry sectors and their constituent stocks
 - **Composable Analysis** — `analyze run` command with `--modules` flag to compose any combination of fundamental, technical, risk, volume, signals, peer, and checklist in a single call
 - **Comprehensive Report** — Full stock report with buy-readiness checklist combining fundamental, technical, and risk analysis
 - **Risk Metrics** — Annualized volatility, max drawdown, Sharpe ratio, Sortino ratio (powered by QuantStats)
 - **Technical Analysis** — MA, MACD, RSI, Bollinger Bands with Chinese explanations (powered by pandas-ta)
 - **Portfolio Optimization** — Equal weight, risk parity, minimum volatility, maximum Sharpe allocation (powered by PyPortfolioOpt)
+- **Investment Thesis Tracking** — Record buy rationale, key assumptions, target/stop-loss prices; review reminders via guardrails
 - **Investment Journal** — Structured entries with decision type and emotion tagging for pattern analysis
 - **Claude Code Skill** — Natural language interface via unified `/haoinvest` skill
 
@@ -61,13 +64,25 @@ uv run haoinvest analyze correlation 600519,NVDA  # Correlation matrix
 uv run haoinvest analyze peer 600519              # Same-sector peer comparison
 uv run haoinvest analyze report 600519            # Full report with buy-readiness checklist
 
-# Sectors
+# Stock screening
+uv run haoinvest market screen --roe-min 15 --pe-max 20    # Value screen
+uv run haoinvest market screen --div-min 3 --limit 10      # High dividend
+
+# Sector data
 uv run haoinvest market sector-list               # A-share industry sectors
 uv run haoinvest market sector 白酒               # Sector constituent stocks
+uv run haoinvest market sector-flow               # Sector capital flow (beta)
+uv run haoinvest market sector-flow --type concept # Concept board flow
 
 # Strategy
 uv run haoinvest strategy optimize --method risk_parity  # also: max_sharpe, min_volatility
 uv run haoinvest strategy rebalance --target '{"600519": 0.5, "NVDA": 0.5}'
+
+# Investment thesis
+uv run haoinvest portfolio thesis add 600519 1800 "白酒龙头" --target 2200 --stop-loss 1600
+uv run haoinvest portfolio thesis list                     # View all theses
+uv run haoinvest portfolio thesis show 1                   # Thesis details
+uv run haoinvest portfolio thesis review 1                 # Mark as reviewed
 
 # Journal
 uv run haoinvest journal add "First buy of Moutai" --decision buy --emotion rational
@@ -113,7 +128,7 @@ Use the unified `/haoinvest` skill in Claude Code for natural language interacti
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| `HAOINVEST_DATA_DIR` | `~/.haoinvest/` | Data directory path |
+| `HAOINVEST_DATA_DIR` | `.haoinvest/` (project-local) | Data directory path |
 | `HAOINVEST_API_TIMEOUT` | `30` | A-share API timeout (seconds) |
 | `HAOINVEST_CACHE_TTL` | `14400` | Analysis cache TTL (seconds) |
 | `HAOINVEST_PRICE_CACHE_TTL` | `3600` | Price cache TTL (seconds) |

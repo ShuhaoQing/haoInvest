@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from ..config import ZERO_THRESHOLD
 from ..db import Database
@@ -12,6 +12,7 @@ from ..models import (
     MarketType,
     PositionAlert,
     RecentPriceChange,
+    ThesisStatus,
 )
 from .rules import load_config
 
@@ -98,6 +99,40 @@ def scan_alerts(
                     )
                 )
 
+    # Thesis review alerts
+    alerts.extend(_scan_thesis_review_alerts(db))
+
+    return alerts
+
+
+def _scan_thesis_review_alerts(db: Database) -> list[PositionAlert]:
+    """Check for active theses that are overdue for review."""
+
+    theses = db.get_theses(status=ThesisStatus.ACTIVE)
+    alerts: list[PositionAlert] = []
+    now = datetime.now()
+
+    for thesis in theses:
+        last_check = thesis.last_reviewed_at or thesis.created_at
+        if last_check is None:
+            continue
+
+        days_since = (now - last_check).days
+        if days_since > thesis.review_interval_days:
+            alerts.append(
+                PositionAlert(
+                    symbol=thesis.symbol,
+                    alert_type=AlertType.THESIS_REVIEW,
+                    current_pnl_pct=0,
+                    threshold_pct=0,
+                    original_thesis=thesis.thesis_summary,
+                    message=(
+                        f"{thesis.symbol} 投资逻辑已 {days_since} 天未审查"
+                        f"（间隔 {thesis.review_interval_days} 天），请审查是否仍然成立"
+                    ),
+                )
+            )
+
     return alerts
 
 
@@ -149,9 +184,14 @@ def _find_closest_bar(bars: list, target_date: date):
 
 
 def _get_original_thesis(db: Database, symbol: str) -> str | None:
-    """Find the original buy thesis from journal entries."""
+    """Find the original buy thesis — check investment_theses first, then journal."""
+    # Prefer structured thesis
+    theses = db.get_theses(symbol=symbol, status=ThesisStatus.ACTIVE)
+    if theses:
+        return theses[0].thesis_summary
+
+    # Fallback to journal entries
     entries = db.get_journal_entries(symbol=symbol, limit=50)
-    # Look for the earliest BUY decision entry
     buy_entries = [
         e for e in entries if e.decision_type and e.decision_type.value == "buy"
     ]

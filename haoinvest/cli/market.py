@@ -163,6 +163,116 @@ def sector_list(
         )
 
 
+@app.command("screen")
+def screen(
+    pe_min: Optional[float] = typer.Option(None, help="Min PE ratio"),
+    pe_max: Optional[float] = typer.Option(None, help="Max PE ratio"),
+    pb_min: Optional[float] = typer.Option(None, help="Min PB ratio"),
+    pb_max: Optional[float] = typer.Option(None, help="Max PB ratio"),
+    roe_min: Optional[float] = typer.Option(None, help="Min ROE (%)"),
+    cap_min: Optional[float] = typer.Option(
+        None, help="Min market cap (yuan, e.g. 10e9 for 100亿)"
+    ),
+    cap_max: Optional[float] = typer.Option(None, help="Max market cap (yuan)"),
+    dividend_yield_min: Optional[float] = typer.Option(
+        None, "--div-min", help="Min dividend yield (%)"
+    ),
+    sort: str = typer.Option(
+        "ROE_WEIGHT", help="Sort field: ROE_WEIGHT, PE9, TOTAL_MARKET_CAP, ZXGXL"
+    ),
+    limit: int = typer.Option(20, help="Max results"),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """条件选股 — screen A-share stocks by financial criteria."""
+    from ..market.ashare_provider import AShareProvider
+
+    try:
+        result = AShareProvider.screen_stocks(
+            pe_min=pe_min,
+            pe_max=pe_max,
+            pb_min=pb_min,
+            pb_max=pb_max,
+            roe_min=roe_min,
+            cap_min=cap_min,
+            cap_max=cap_max,
+            dividend_yield_min=dividend_yield_min,
+            sort_by=sort,
+            page_size=limit,
+        )
+    except Exception as e:
+        error_output(str(e))
+        raise typer.Exit(1)
+
+    total = result.get("total", 0)
+    data = result.get("data", [])
+
+    # Format market cap to 亿 for display
+    for row in data:
+        cap = row.get("market_cap")
+        if cap is not None:
+            row["market_cap_yi"] = f"{cap / 1e8:.0f}亿"
+        else:
+            row["market_cap_yi"] = "N/A"
+        # Round dividend yield
+        dy = row.get("dividend_yield")
+        if dy is not None:
+            row["dividend_yield"] = round(dy, 2)
+
+    if use_json:
+        json_output({"total": total, "data": data})
+    else:
+        typer.echo(f"共 {total} 只股票符合条件 (显示前 {len(data)} 只)\n")
+        tsv_output(
+            data,
+            columns=[
+                "symbol",
+                "name",
+                "price",
+                "pe",
+                "pb",
+                "roe",
+                "market_cap_yi",
+                "dividend_yield",
+            ],
+        )
+
+
+@app.command("sector-flow")
+def sector_flow(
+    board_type: str = typer.Option(
+        "industry", "--type", "-t", help="Board type: industry (行业) or concept (概念)"
+    ),
+    limit: int = typer.Option(20, "--limit", "-n", help="Number of sectors"),
+    use_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """板块资金流向 — sector capital flow ranking (beta)."""
+    from ..market.ashare_provider import AShareProvider
+
+    try:
+        rows = AShareProvider.get_sector_flow(board_type=board_type, limit=limit)
+    except Exception as e:
+        error_output(str(e))
+        raise typer.Exit(1)
+
+    if not rows:
+        typer.echo("⚠ 板块资金流向数据暂时不可用 (push2 endpoint)")
+        raise typer.Exit(1)
+
+    if use_json:
+        json_output(rows)
+    else:
+        tsv_output(
+            rows,
+            columns=[
+                "name",
+                "net_inflow_yi",
+                "net_inflow_pct",
+                "super_large_pct",
+                "large_pct",
+            ],
+        )
+
+
 @app.command("sector")
 def sector(
     name: str = typer.Argument(help="Sector name, e.g. 白酒, 银行, 半导体"),

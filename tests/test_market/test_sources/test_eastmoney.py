@@ -39,10 +39,11 @@ class TestGetFinancialIndicators:
 
         result = get_financial_indicators("600519")
 
-        assert result["roe"] == 24.64
-        assert result["gross_margin"] == 91.29
+        assert len(result) == 1
+        assert result[0]["roe"] == 24.64
+        assert result[0]["gross_margin"] == 91.29
         assert (
-            result["profit_margin"] == 49.37
+            result[0]["profit_margin"] == 49.37
         )  # 64626746712.18 / 130903889634.88 * 100
         mock_get.assert_called_once()
 
@@ -50,7 +51,7 @@ class TestGetFinancialIndicators:
     def test_api_failure_returns_empty(self, mock_get):
         mock_get.side_effect = Exception("Connection error")
         result = get_financial_indicators("600519")
-        assert result == {}
+        assert result == []
 
     @patch("haoinvest.market.sources.eastmoney.requests.get")
     def test_empty_result_returns_empty(self, mock_get):
@@ -58,7 +59,7 @@ class TestGetFinancialIndicators:
             {"success": True, "result": {"data": [], "count": 0}}
         )
         result = get_financial_indicators("600519")
-        assert result == {}
+        assert result == []
 
     @patch("haoinvest.market.sources.eastmoney.requests.get")
     def test_unsuccessful_response(self, mock_get):
@@ -66,7 +67,7 @@ class TestGetFinancialIndicators:
             {"success": False, "result": None, "code": 9501}
         )
         result = get_financial_indicators("600519")
-        assert result == {}
+        assert result == []
 
     @patch("haoinvest.market.sources.eastmoney.requests.get")
     def test_missing_revenue_skips_profit_margin(self, mock_get):
@@ -86,9 +87,10 @@ class TestGetFinancialIndicators:
             }
         )
         result = get_financial_indicators("600519")
-        assert result["roe"] == 15.0
-        assert result["gross_margin"] == 60.0
-        assert "profit_margin" not in result
+        assert len(result) == 1
+        assert result[0]["roe"] == 15.0
+        assert result[0]["gross_margin"] == 60.0
+        assert "profit_margin" not in result[0]
 
 
 class TestGetBasicInfo:

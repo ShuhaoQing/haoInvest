@@ -9,7 +9,7 @@ Python library + Claude Code skills for tracking portfolios, analyzing stocks, a
 
 - **Language**: Python 3.11+
 - **Package Manager**: uv (NOT pip)
-- **Database**: SQLite (~/.haoinvest/haoinvest.db)
+- **Database**: SQLite (.haoinvest/haoinvest.db — project-local, gitignored)
 - **Data Sources**: Sina/Tencent/eastmoney direct APIs (A-shares), yfinance (US/HK), Crypto.com MCP (crypto)
 - **Testing**: pytest
 
@@ -30,7 +30,7 @@ uv run ruff format --check .         # Format check
 haoinvest/
 ├── models.py          # Pydantic models (Transaction, Position, JournalEntry, etc.)
 ├── db.py              # SQLite persistence, full CRUD, WAL mode
-├── config.py          # Config management (~/.haoinvest/)
+├── config.py          # Config management (.haoinvest/ in project root)
 ├── fx.py              # Currency conversion with fallback rates
 ├── journal.py         # Investment journal with emotion/decision tagging
 ├── cli/               # Typer CLI — entry point: `uv run haoinvest`
@@ -106,5 +106,13 @@ GitHub Actions runs on push/PR to `main`: ruff lint, ruff format check, pytest (
 
 ### Data Directory
 
-- All user data lives under `~/.haoinvest/` (configurable via `HAOINVEST_DATA_DIR`)
+- All user data lives under `.haoinvest/` in the project root (configurable via `HAOINVEST_DATA_DIR`)
+- Obsidian vault for research notes goes under `.haoinvest/vault/`
+- Both are gitignored
 - Never hardcode absolute paths to data files
+
+### Skill Reference Files
+
+- Evaluation frameworks live in `.claude/skills/haoinvest/references/`
+- Code outputs raw data; Claude interprets using reference files
+- Reference files focus on frameworks and processes, not specific number thresholds

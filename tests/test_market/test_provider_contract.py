@@ -90,7 +90,7 @@ class TestAShareProviderContract:
             "pb_ratio": 10.2,
             "total_market_cap": 2100000000000,
         }
-        mock_em_fin.return_value = {"roe": 24.64, "gross_margin": 91.29}
+        mock_em_fin.return_value = [{"roe": 24.64, "gross_margin": 91.29}]
 
         provider = AShareProvider()
         info = provider.get_basic_info("600519")
