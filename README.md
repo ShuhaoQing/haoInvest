@@ -20,6 +20,7 @@ Built for a beginner investor in China covering A-shares, US stocks, HK stocks, 
 - **Risk Metrics** — Annualized volatility, max drawdown, Sharpe ratio, Sortino ratio (powered by QuantStats)
 - **Technical Analysis** — MA, MACD, RSI, Bollinger Bands with Chinese explanations (powered by pandas-ta)
 - **Portfolio Optimization** — Equal weight, risk parity, minimum volatility, maximum Sharpe allocation (powered by PyPortfolioOpt)
+- **Investment Thesis Tracking** — Record buy rationale, key assumptions, target/stop-loss prices; review reminders via guardrails
 - **Investment Journal** — Structured entries with decision type and emotion tagging for pattern analysis
 - **Claude Code Skill** — Natural language interface via unified `/haoinvest` skill
 
@@ -76,6 +77,12 @@ uv run haoinvest market sector-flow --type concept # Concept board flow
 # Strategy
 uv run haoinvest strategy optimize --method risk_parity  # also: max_sharpe, min_volatility
 uv run haoinvest strategy rebalance --target '{"600519": 0.5, "NVDA": 0.5}'
+
+# Investment thesis
+uv run haoinvest portfolio thesis add 600519 1800 "白酒龙头" --target 2200 --stop-loss 1600
+uv run haoinvest portfolio thesis list                     # View all theses
+uv run haoinvest portfolio thesis show 1                   # Thesis details
+uv run haoinvest portfolio thesis review 1                 # Mark as reviewed
 
 # Journal
 uv run haoinvest journal add "First buy of Moutai" --decision buy --emotion rational

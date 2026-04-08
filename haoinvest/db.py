@@ -9,10 +9,12 @@ from typing import Optional
 from .config import get_db_path
 from .models import (
     DailySnapshot,
+    InvestmentThesis,
     JournalEntry,
     MarketType,
     Position,
     PriceBar,
+    ThesisStatus,
     Transaction,
     TransactionAction,
 )
@@ -117,6 +119,26 @@ CREATE TABLE IF NOT EXISTS guardrails_config (
     value TEXT NOT NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS investment_theses (
+    id INTEGER PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    entry_date DATE NOT NULL,
+    entry_price REAL NOT NULL,
+    thesis_summary TEXT NOT NULL,
+    key_assumptions TEXT NOT NULL DEFAULT '[]',
+    target_price REAL,
+    stop_loss_price REAL,
+    review_interval_days INTEGER NOT NULL DEFAULT 30,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'invalidated', 'realized')),
+    last_reviewed_at TIMESTAMP,
+    invalidation_reason TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_theses_symbol ON investment_theses(symbol);
+CREATE INDEX IF NOT EXISTS idx_theses_status ON investment_theses(status);
 """
 
 
@@ -488,6 +510,98 @@ class Database:
             (key, value),
         )
         self.conn.commit()
+
+    # --- Investment Theses ---
+
+    def add_thesis(self, thesis: InvestmentThesis) -> int:
+        """Insert a new investment thesis."""
+        cursor = self.conn.execute(
+            """INSERT INTO investment_theses
+               (symbol, entry_date, entry_price, thesis_summary, key_assumptions,
+                target_price, stop_loss_price, review_interval_days, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                thesis.symbol,
+                thesis.entry_date.isoformat(),
+                thesis.entry_price,
+                thesis.thesis_summary,
+                json.dumps(thesis.key_assumptions, ensure_ascii=False),
+                thesis.target_price,
+                thesis.stop_loss_price,
+                thesis.review_interval_days,
+                thesis.status.value,
+            ),
+        )
+        self.conn.commit()
+        return cursor.lastrowid  # type: ignore[return-value]
+
+    def get_theses(
+        self,
+        symbol: Optional[str] = None,
+        status: Optional[ThesisStatus] = None,
+    ) -> list[InvestmentThesis]:
+        """List theses, optionally filtered by symbol and/or status."""
+        query = "SELECT * FROM investment_theses WHERE 1=1"
+        params: list = []
+        if symbol:
+            query += " AND symbol = ?"
+            params.append(symbol)
+        if status:
+            query += " AND status = ?"
+            params.append(status.value)
+        query += " ORDER BY created_at DESC"
+        rows = self.conn.execute(query, params).fetchall()
+        return [self._row_to_thesis(r) for r in rows]
+
+    def get_thesis(self, thesis_id: int) -> Optional[InvestmentThesis]:
+        """Get a single thesis by ID."""
+        row = self.conn.execute(
+            "SELECT * FROM investment_theses WHERE id = ?", (thesis_id,)
+        ).fetchone()
+        return self._row_to_thesis(row) if row else None
+
+    def update_thesis_status(
+        self,
+        thesis_id: int,
+        status: ThesisStatus,
+        reason: Optional[str] = None,
+    ) -> None:
+        """Update thesis status (e.g., invalidate or realize)."""
+        self.conn.execute(
+            """UPDATE investment_theses
+               SET status = ?, invalidation_reason = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (status.value, reason, thesis_id),
+        )
+        self.conn.commit()
+
+    def mark_thesis_reviewed(self, thesis_id: int) -> None:
+        """Update last_reviewed_at to now."""
+        self.conn.execute(
+            """UPDATE investment_theses
+               SET last_reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (thesis_id,),
+        )
+        self.conn.commit()
+
+    def _row_to_thesis(self, row: sqlite3.Row) -> InvestmentThesis:
+        return InvestmentThesis(
+            id=row["id"],
+            symbol=row["symbol"],
+            entry_date=date.fromisoformat(str(row["entry_date"])),
+            entry_price=row["entry_price"],
+            thesis_summary=row["thesis_summary"],
+            key_assumptions=json.loads(row["key_assumptions"]),
+            target_price=row["target_price"],
+            stop_loss_price=row["stop_loss_price"],
+            review_interval_days=row["review_interval_days"],
+            status=ThesisStatus(row["status"]),
+            last_reviewed_at=_parse_datetime(row["last_reviewed_at"]),
+            invalidation_reason=row["invalidation_reason"],
+            created_at=_parse_datetime(row["created_at"]),
+            updated_at=_parse_datetime(row["updated_at"]),
+        )
 
     def get_journal_entries_by_emotion(
         self,

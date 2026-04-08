@@ -552,6 +552,42 @@ class RebalanceTrade(BaseModel):
     note: Optional[str] = None
 
 
+# --- Investment Thesis models ---
+
+
+class ThesisStatus(str, Enum):
+    """Lifecycle status of an investment thesis."""
+
+    ACTIVE = "active"
+    INVALIDATED = "invalidated"
+    REALIZED = "realized"
+
+
+class InvestmentThesis(BaseModel):
+    """Investment thesis for position management — records why a stock was bought
+    and the conditions under which the thesis remains valid."""
+
+    id: Optional[int] = None
+    symbol: str
+    entry_date: date
+    entry_price: float
+    thesis_summary: str = Field(description="Core reason for buying")
+    key_assumptions: list[str] = Field(
+        default_factory=list,
+        description="Conditions that must hold for the thesis to remain valid",
+    )
+    target_price: Optional[float] = None
+    stop_loss_price: Optional[float] = None
+    review_interval_days: int = Field(
+        default=30, description="Days between mandatory thesis reviews"
+    )
+    status: ThesisStatus = ThesisStatus.ACTIVE
+    last_reviewed_at: Optional[datetime] = None
+    invalidation_reason: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
 # --- Guardrails models ---
 
 
