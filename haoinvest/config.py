@@ -4,9 +4,25 @@ import os
 from pathlib import Path
 
 
+def _project_root() -> Path:
+    """Return the project root directory (where pyproject.toml lives)."""
+    current = Path(__file__).resolve().parent
+    while current != current.parent:
+        if (current / "pyproject.toml").exists():
+            return current
+        current = current.parent
+    return Path(__file__).resolve().parent.parent
+
+
 def get_data_dir() -> Path:
-    """Return the data directory (~/.haoinvest/), creating it if needed."""
-    data_dir = Path(os.environ.get("HAOINVEST_DATA_DIR", Path.home() / ".haoinvest"))
+    """Return the data directory, creating it if needed.
+
+    Default: <project_root>/data/
+    Override: HAOINVEST_DATA_DIR environment variable
+    """
+    data_dir = Path(
+        os.environ.get("HAOINVEST_DATA_DIR", _project_root() / ".haoinvest")
+    )
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
 

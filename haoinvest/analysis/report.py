@@ -73,6 +73,15 @@ def full_stock_report(
         free_cash_flow=fundamental.free_cash_flow,
         operating_cash_flow=fundamental.operating_cash_flow,
         peg_ratio=fundamental.peg_ratio,
+        dividend_yield=fundamental.dividend_yield,
+        eps=fundamental.eps,
+        book_value_per_share=fundamental.book_value_per_share,
+        operating_cash_flow_per_share=fundamental.operating_cash_flow_per_share,
+        net_profit_growth=fundamental.net_profit_growth,
+        revenue_growth_qoq=fundamental.revenue_growth_qoq,
+        net_profit_growth_qoq=fundamental.net_profit_growth_qoq,
+        report_date=fundamental.report_date,
+        report_type=fundamental.report_type,
         financial_health=fundamental.financial_health,
     )
 
@@ -254,7 +263,7 @@ def _compute_checklist(report: StockReport) -> BuyReadinessChecklist:
 
 
 def _score_valuation(overall: str) -> int:
-    mapping = {"偏低估": 5, "估值合理": 4, "偏高估": 2, "明显高估": 1}
+    mapping = {"偏低": 5, "中等": 4, "偏高": 2, "高": 1}
     return mapping.get(overall, 3)
 
 

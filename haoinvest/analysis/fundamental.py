@@ -46,6 +46,15 @@ def analyze_stock(symbol: str, market_type: MarketType) -> FundamentalAnalysis:
         free_cash_flow=info.free_cash_flow,
         operating_cash_flow=info.operating_cash_flow,
         peg_ratio=info.peg_ratio,
+        dividend_yield=info.dividend_yield,
+        eps=info.eps,
+        book_value_per_share=info.book_value_per_share,
+        operating_cash_flow_per_share=info.operating_cash_flow_per_share,
+        net_profit_growth=info.net_profit_growth,
+        revenue_growth_qoq=info.revenue_growth_qoq,
+        net_profit_growth_qoq=info.net_profit_growth_qoq,
+        report_date=info.report_date,
+        report_type=info.report_type,
         financial_health=financial_health,
     )
 
@@ -53,35 +62,23 @@ def analyze_stock(symbol: str, market_type: MarketType) -> FundamentalAnalysis:
 def _assess_valuation(
     pe: float | None, pb: float | None, market_type: MarketType
 ) -> ValuationAssessment:
-    """Simple valuation assessment based on PE and PB ratios.
+    """Data-focused valuation summary.
 
-    This is a rough heuristic for educational purposes, not financial advice.
+    Shows PE/PB values with rough bucketing. Deep interpretation (industry-relative,
+    growth-adjusted) should be done by Claude using valuation-guide.md reference.
     """
     pe_assessment = "N/A"
     pb_assessment = "N/A"
     overall = "无法评估"
 
     if pe is not None and pe > 0:
-        if pe < 15:
-            pe_assessment = "低估 (PE < 15)"
-        elif pe < 25:
-            pe_assessment = "合理 (15 ≤ PE < 25)"
-        elif pe < 40:
-            pe_assessment = "偏高 (25 ≤ PE < 40)"
-        else:
-            pe_assessment = "高估 (PE ≥ 40)"
+        pe_assessment = f"PE {pe:.1f}"
 
     if pb is not None and pb > 0:
-        if pb < 1:
-            pb_assessment = "低估 (PB < 1)"
-        elif pb < 3:
-            pb_assessment = "合理 (1 ≤ PB < 3)"
-        elif pb < 6:
-            pb_assessment = "偏高 (3 ≤ PB < 6)"
-        else:
-            pb_assessment = "高估 (PB ≥ 6)"
+        pb_assessment = f"PB {pb:.2f}"
 
-    # Simple overall
+    # Rough overall bucket — NOTE: this is a crude heuristic.
+    # True valuation requires peer comparison (see valuation-guide.md).
     scores = []
     if pe is not None and pe > 0:
         if pe < 15:
@@ -106,13 +103,13 @@ def _assess_valuation(
     if scores:
         avg = sum(scores) / len(scores)
         if avg <= 1.5:
-            overall = "偏低估"
+            overall = "偏低"
         elif avg <= 2.5:
-            overall = "估值合理"
+            overall = "中等"
         elif avg <= 3.5:
-            overall = "偏高估"
+            overall = "偏高"
         else:
-            overall = "明显高估"
+            overall = "高"
 
     return ValuationAssessment(
         pe_assessment=pe_assessment,

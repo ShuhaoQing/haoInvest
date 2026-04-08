@@ -5,7 +5,9 @@ dist/
 .venv/
 *.db
 .env
-~/.haoinvest/
+
+# User data + Obsidian vault
+.haoinvest/
 
 # claude
 .claude/settings.local.json

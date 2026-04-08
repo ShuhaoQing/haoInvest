@@ -133,13 +133,13 @@ class TestFullStockReportCacheKey:
 
 class TestScoreValuation:
     def test_undervalued(self):
-        assert _score_valuation("偏低估") == 5
+        assert _score_valuation("偏低") == 5
 
     def test_fair(self):
-        assert _score_valuation("估值合理") == 4
+        assert _score_valuation("中等") == 4
 
     def test_overvalued(self):
-        assert _score_valuation("偏高估") == 2
+        assert _score_valuation("偏高") == 2
 
     def test_unknown(self):
         assert _score_valuation("无法评估") == 3
@@ -189,7 +189,7 @@ class TestComputeChecklist:
             symbol="600519",
             market_type="a_share",
             current_price=1800.0,
-            valuation=ValuationAssessment(overall="偏低估"),
+            valuation=ValuationAssessment(overall="偏低"),
             risk_metrics=RiskMetrics(max_drawdown_pct=-8.0, sharpe_ratio=1.5),
             roe=20.0,
             revenue_growth=25.0,
@@ -212,7 +212,7 @@ class TestComputeChecklist:
             symbol="999999",
             market_type="a_share",
             current_price=5.0,
-            valuation=ValuationAssessment(overall="明显高估"),
+            valuation=ValuationAssessment(overall="高"),
             risk_metrics=RiskMetrics(max_drawdown_pct=-45.0, sharpe_ratio=-0.5),
             roe=2.0,
             revenue_growth=-20.0,
@@ -240,7 +240,7 @@ class TestReportCLI:
             market_type="a_share",
             current_price=1800.0,
             valuation=ValuationAssessment(
-                pe_assessment="偏高", pb_assessment="高估", overall="偏高估"
+                pe_assessment="偏高", pb_assessment="高估", overall="偏高"
             ),
             risk_metrics=RiskMetrics(
                 annualized_volatility=25.0,
@@ -253,7 +253,7 @@ class TestReportCLI:
             ),
             checklist=BuyReadinessChecklist(
                 items=[
-                    ChecklistItem(dimension="估值", score=4, assessment="偏高估"),
+                    ChecklistItem(dimension="估值", score=4, assessment="偏高"),
                     ChecklistItem(dimension="盈利能力", score=5, assessment="优秀"),
                 ],
                 total_score=9,

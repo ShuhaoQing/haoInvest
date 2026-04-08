@@ -48,7 +48,7 @@ def _mock_fundamental():
         valuation=ValuationAssessment(
             pe_assessment="偏高",
             pb_assessment="高估",
-            overall="偏高估",
+            overall="偏高",
         ),
     )
 
@@ -194,7 +194,7 @@ class TestAnalyzeRunJsonOutput:
             valuation=ValuationAssessment(
                 pe_assessment="合理",
                 pb_assessment="偏高",
-                overall="估值合理",
+                overall="中等",
             ),
         )
         calls = iter([mock_a, mock_b])
@@ -232,7 +232,7 @@ class TestAnalyzeRunBatch:
             valuation=ValuationAssessment(
                 pe_assessment="合理",
                 pb_assessment="偏高",
-                overall="估值合理",
+                overall="中等",
             ),
         )
         calls = iter([mock_a, mock_b])

@@ -24,16 +24,16 @@ class TestAnalyzeFundamental:
             pb_ratio=12.1,
             total_market_cap=2100000000000,
             valuation=ValuationAssessment(
-                pe_assessment="偏高 (25 ≤ PE < 40)",
-                pb_assessment="高估 (PB ≥ 6)",
-                overall="偏高估",
+                pe_assessment="PE 35.2",
+                pb_assessment="PB 12.10",
+                overall="偏高",
             ),
         )
         with patch("haoinvest.cli.analyze.analyze_stock", return_value=mock_result):
             result = runner.invoke(app, ["analyze", "fundamental", "600519"])
             assert result.exit_code == 0
             assert "贵州茅台" in result.output
-            assert "偏高估" in result.output
+            assert "偏高" in result.output
 
     def test_fundamental_sz_stock(self):
         mock_result = FundamentalAnalysis(
@@ -47,9 +47,9 @@ class TestAnalyzeFundamental:
             pb_ratio=0.6,
             total_market_cap=240000000000,
             valuation=ValuationAssessment(
-                pe_assessment="低估 (PE < 15)",
-                pb_assessment="低估 (PB < 1)",
-                overall="偏低估",
+                pe_assessment="PE 5.3",
+                pb_assessment="PB 0.60",
+                overall="偏低",
             ),
         )
         with patch("haoinvest.cli.analyze.analyze_stock", return_value=mock_result):
@@ -75,7 +75,7 @@ class TestAnalyzeFundamental:
             pe_ratio=35.2,
             pb_ratio=12.1,
             valuation=ValuationAssessment(
-                pe_assessment="偏高", pb_assessment="高估", overall="偏高估"
+                pe_assessment="偏高", pb_assessment="高估", overall="偏高"
             ),
         )
         with patch("haoinvest.cli.analyze.analyze_stock", return_value=mock_result):
@@ -98,7 +98,7 @@ class TestAnalyzeFundamentalBatch:
                 currency="CNY",
                 pe_ratio=35.2,
                 pb_ratio=12.1,
-                valuation=ValuationAssessment(overall="偏高估"),
+                valuation=ValuationAssessment(overall="偏高"),
                 roe=25.0,
                 revenue_growth=15.0,
                 profit_margin=50.0,
@@ -113,7 +113,7 @@ class TestAnalyzeFundamentalBatch:
                 currency="CNY",
                 pe_ratio=5.3,
                 pb_ratio=0.6,
-                valuation=ValuationAssessment(overall="偏低估"),
+                valuation=ValuationAssessment(overall="偏低"),
                 roe=10.0,
                 revenue_growth=8.0,
                 profit_margin=30.0,
@@ -125,8 +125,8 @@ class TestAnalyzeFundamentalBatch:
             assert result.exit_code == 0
             assert "贵州茅台" in result.output
             assert "平安银行" in result.output
-            assert "偏高估" in result.output
-            assert "偏低估" in result.output
+            assert "偏高" in result.output
+            assert "偏低" in result.output
 
     def test_fundamental_batch_one_error(self):
         mock_result = FundamentalAnalysis(
@@ -136,7 +136,7 @@ class TestAnalyzeFundamentalBatch:
             market_type="a_share",
             current_price=1800.0,
             currency="CNY",
-            valuation=ValuationAssessment(overall="偏高估"),
+            valuation=ValuationAssessment(overall="偏高"),
         )
         with patch(
             "haoinvest.cli.analyze.analyze_stock",

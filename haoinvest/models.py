@@ -188,6 +188,32 @@ class BasicInfo(BaseModel):
     peg_ratio: Optional[float] = Field(
         default=None, description="Price/Earnings to Growth ratio"
     )
+    # Additional financial metrics (from eastmoney RPT_LICO_FN_CPD)
+    dividend_yield: Optional[float] = Field(
+        default=None, description="Latest dividend yield (%)"
+    )
+    eps: Optional[float] = Field(default=None, description="Basic earnings per share")
+    book_value_per_share: Optional[float] = Field(
+        default=None, description="Book value per share (BPS)"
+    )
+    operating_cash_flow_per_share: Optional[float] = Field(
+        default=None, description="Operating cash flow per share"
+    )
+    net_profit_growth: Optional[float] = Field(
+        default=None, description="YoY net profit growth (%)"
+    )
+    revenue_growth_qoq: Optional[float] = Field(
+        default=None, description="QoQ revenue growth (%)"
+    )
+    net_profit_growth_qoq: Optional[float] = Field(
+        default=None, description="QoQ net profit growth (%)"
+    )
+    report_date: Optional[str] = Field(
+        default=None, description="Financial report date (e.g., '2025-09-30')"
+    )
+    report_type: Optional[str] = Field(
+        default=None, description="Report type (e.g., '2025年 三季报')"
+    )
 
 
 # --- Analysis models ---
@@ -225,7 +251,7 @@ class FundamentalAnalysis(BaseModel):
     pb_ratio: Optional[float] = None
     total_market_cap: Optional[int] = None
     valuation: ValuationAssessment = Field(default_factory=ValuationAssessment)
-    # Enhanced financial metrics
+    # Financial metrics
     roe: Optional[float] = None
     roa: Optional[float] = None
     debt_to_equity: Optional[float] = None
@@ -237,6 +263,15 @@ class FundamentalAnalysis(BaseModel):
     free_cash_flow: Optional[float] = None
     operating_cash_flow: Optional[float] = None
     peg_ratio: Optional[float] = None
+    dividend_yield: Optional[float] = None
+    eps: Optional[float] = None
+    book_value_per_share: Optional[float] = None
+    operating_cash_flow_per_share: Optional[float] = None
+    net_profit_growth: Optional[float] = None
+    revenue_growth_qoq: Optional[float] = None
+    net_profit_growth_qoq: Optional[float] = None
+    report_date: Optional[str] = None
+    report_type: Optional[str] = None
     financial_health: FinancialHealthAssessment = Field(
         default_factory=FinancialHealthAssessment
     )
@@ -294,7 +329,7 @@ class StockReport(BaseModel):
     technical: Optional["TechnicalIndicators"] = None
     volume: Optional["VolumeAnalysis"] = None
     signals: Optional["SignalSummary"] = None
-    # Enhanced fields (Phase 1+5)
+    # Financial metrics
     roe: Optional[float] = None
     roa: Optional[float] = None
     debt_to_equity: Optional[float] = None
@@ -306,6 +341,15 @@ class StockReport(BaseModel):
     free_cash_flow: Optional[float] = None
     operating_cash_flow: Optional[float] = None
     peg_ratio: Optional[float] = None
+    dividend_yield: Optional[float] = None
+    eps: Optional[float] = None
+    book_value_per_share: Optional[float] = None
+    operating_cash_flow_per_share: Optional[float] = None
+    net_profit_growth: Optional[float] = None
+    revenue_growth_qoq: Optional[float] = None
+    net_profit_growth_qoq: Optional[float] = None
+    report_date: Optional[str] = None
+    report_type: Optional[str] = None
     financial_health: Optional[FinancialHealthAssessment] = None
     checklist: Optional[BuyReadinessChecklist] = None
 
