@@ -12,6 +12,8 @@ Built for a beginner investor in China covering A-shares, US stocks, HK stocks, 
 - **Market Data** — Real-time quotes from Sina/Tencent/eastmoney APIs (A-shares), Yahoo Finance (US/HK), Crypto.com (crypto)
 - **Fundamental Analysis** — PE/PB/ROE valuation assessment with financial health scoring; batch support for multi-symbol comparison
 - **Peer Comparison** — Find and compare same-sector stocks by valuation and performance
+- **Stock Screening** — Screen A-share stocks by PE, PB, ROE, market cap, dividend yield via eastmoney xuangu API
+- **Sector Capital Flow** — Track sector-level capital inflow/outflow (industry & concept boards, beta)
 - **Sector Browsing** — Browse A-share industry sectors and their constituent stocks
 - **Composable Analysis** — `analyze run` command with `--modules` flag to compose any combination of fundamental, technical, risk, volume, signals, peer, and checklist in a single call
 - **Comprehensive Report** — Full stock report with buy-readiness checklist combining fundamental, technical, and risk analysis
@@ -61,9 +63,15 @@ uv run haoinvest analyze correlation 600519,NVDA  # Correlation matrix
 uv run haoinvest analyze peer 600519              # Same-sector peer comparison
 uv run haoinvest analyze report 600519            # Full report with buy-readiness checklist
 
-# Sectors
+# Stock screening
+uv run haoinvest market screen --roe-min 15 --pe-max 20    # Value screen
+uv run haoinvest market screen --div-min 3 --limit 10      # High dividend
+
+# Sector data
 uv run haoinvest market sector-list               # A-share industry sectors
 uv run haoinvest market sector 白酒               # Sector constituent stocks
+uv run haoinvest market sector-flow               # Sector capital flow (beta)
+uv run haoinvest market sector-flow --type concept # Concept board flow
 
 # Strategy
 uv run haoinvest strategy optimize --method risk_parity  # also: max_sharpe, min_volatility
@@ -113,7 +121,7 @@ Use the unified `/haoinvest` skill in Claude Code for natural language interacti
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| `HAOINVEST_DATA_DIR` | `~/.haoinvest/` | Data directory path |
+| `HAOINVEST_DATA_DIR` | `.haoinvest/` (project-local) | Data directory path |
 | `HAOINVEST_API_TIMEOUT` | `30` | A-share API timeout (seconds) |
 | `HAOINVEST_CACHE_TTL` | `14400` | Analysis cache TTL (seconds) |
 | `HAOINVEST_PRICE_CACHE_TTL` | `3600` | Price cache TTL (seconds) |

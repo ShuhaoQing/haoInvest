@@ -84,3 +84,30 @@ class AShareProvider(MarketProvider):
         """Get stocks in a specific industry board."""
         with bypass_proxy():
             return sina.get_sector_constituents(sector_name)
+
+    @staticmethod
+    def screen_stocks(**kwargs) -> dict:
+        """Screen A-share stocks by financial criteria.
+
+        Supported filters: pe_min, pe_max, pb_min, pb_max, roe_min,
+        cap_min, cap_max, dividend_yield_min, sort_by, sort_asc,
+        page, page_size.
+
+        Returns dict with 'total' count and 'data' list.
+        """
+        with bypass_proxy():
+            return eastmoney.screen_stocks(**kwargs)
+
+    @staticmethod
+    def get_sector_flow(board_type: str = "industry", limit: int = 20) -> list[dict]:
+        """Fetch sector capital flow from push2 endpoint (beta).
+
+        Args:
+            board_type: "industry" or "concept"
+            limit: Number of sectors to return
+
+        Returns list of dicts with net main inflow data.
+        Push2 endpoint has known stability issues — returns empty list on failure.
+        """
+        with bypass_proxy():
+            return eastmoney.get_sector_flow(board_type=board_type, limit=limit)
