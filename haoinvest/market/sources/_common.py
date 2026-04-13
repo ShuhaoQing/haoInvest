@@ -27,21 +27,23 @@ def bypass_proxy():
         os.environ.update(saved)
 
 
+def _is_sh(symbol: str) -> bool:
+    """Check if symbol belongs to Shanghai Exchange.
+
+    Shanghai codes: 6xxxxx (main/STAR), 9xxxxx, 5xxxxx (ETF/funds including
+    51xxxx, 56xxxx cross-market ETFs that route via SH on quote APIs).
+    """
+    return symbol.startswith(("5", "6", "9"))
+
+
 def market_prefix(symbol: str) -> str:
     """Return 'sh' or 'sz' based on A-share stock code convention."""
-    if symbol.startswith(("6", "9")):
-        return "sh"
-    return "sz"
-
-
-def secid(symbol: str) -> str:
-    """Return eastmoney secid like '1.603618' (1=SH, 0=SZ)."""
-    return f"1.{symbol}" if symbol.startswith(("6", "9")) else f"0.{symbol}"
+    return "sh" if _is_sh(symbol) else "sz"
 
 
 def exchange_prefix(symbol: str) -> str:
     """Return 'SH' or 'SZ' for eastmoney web API code parameter."""
-    return "SH" if symbol.startswith(("6", "9")) else "SZ"
+    return "SH" if _is_sh(symbol) else "SZ"
 
 
 def parse_float(value: Any) -> float | None:
