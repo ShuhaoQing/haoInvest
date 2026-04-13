@@ -41,11 +41,6 @@ def market_prefix(symbol: str) -> str:
     return "sh" if _is_sh(symbol) else "sz"
 
 
-def secid(symbol: str) -> str:
-    """Return eastmoney secid like '1.603618' (1=SH, 0=SZ)."""
-    return f"1.{symbol}" if _is_sh(symbol) else f"0.{symbol}"
-
-
 def exchange_prefix(symbol: str) -> str:
     """Return 'SH' or 'SZ' for eastmoney web API code parameter."""
     return "SH" if _is_sh(symbol) else "SZ"

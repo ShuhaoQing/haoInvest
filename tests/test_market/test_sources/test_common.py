@@ -5,7 +5,6 @@ import pytest
 from haoinvest.market.sources._common import (
     exchange_prefix,
     market_prefix,
-    secid,
 )
 
 
@@ -35,30 +34,14 @@ class TestMarketPrefix:
             ("002463", "sz"),
             # Shenzhen ChiNext
             ("300750", "sz"),
+            # Shanghai B-share
+            ("900001", "sh"),
             # Shenzhen ETF (15xxxx)
             ("159915", "sz"),
         ],
     )
     def test_market_prefix(self, symbol: str, expected: str) -> None:
         assert market_prefix(symbol) == expected
-
-
-class TestSecid:
-    """Verify eastmoney secid mapping."""
-
-    @pytest.mark.parametrize(
-        "symbol,expected",
-        [
-            ("600519", "1.600519"),
-            ("563020", "1.563020"),
-            ("518880", "1.518880"),
-            ("000988", "0.000988"),
-            ("002463", "0.002463"),
-            ("300750", "0.300750"),
-        ],
-    )
-    def test_secid(self, symbol: str, expected: str) -> None:
-        assert secid(symbol) == expected
 
 
 class TestExchangePrefix:
